@@ -1,0 +1,64 @@
+<World>
+	<Robot Type="Arm" Configuration="0 0 0" Lengths="1 1 1" />
+	<Goal Configuration="90 -45 -45" />
+	<Obstacles>
+		<Obstacle Type="Sphere" Center="1.5 1" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="0 2" Radius="0.3" />
+		<Obstacle Type="Sphere" Center="1 2.5" Radius="0.3" />
+		<Obstacle Type="Sphere" Center="1 -1" Radius="0.2" />
+		<Obstacle Type="Sphere" Center="-1 0.3" Radius="0.2" />
+	</Obstacles>
+	<Landmarks>
+		<Point>2.542750 1.679499 0.393739</Point>
+		<Point>2.495389 -0.828882 -1.019566</Point>
+		<Point>0.746790 -2.595613 -0.782272</Point>
+		<Point>-1.964243 1.951097 1.402710</Point>
+		<Point>1.097509 2.601122 2.016657</Point>
+		<Point>0.306146 -3.043942 -2.546661</Point>
+		<Point>0.092729 2.843032 2.155517</Point>
+		<Point>2.733263 2.974542 -0.800940</Point>
+		<Point>-1.125314 1.779699 -1.808164</Point>
+		<Point>2.884938 2.703233 -0.843647</Point>
+		<Point>-0.974444 1.210654 1.360962</Point>
+		<Point>1.887114 0.588549 -2.531024</Point>
+		<Point>0.373907 -2.870850 1.618748</Point>
+		<Point>1.003095 0.624921 -1.715343</Point>
+		<Point>1.342807 1.410590 -0.978807</Point>
+		<Point>-2.935813 2.159002 1.698346</Point>
+		<Point>0.060612 1.300389 1.829500</Point>
+		<Point>-1.063938 2.599198 0.481951</Point>
+		<Point>-1.332605 -1.464831 2.451562</Point>
+		<Point>-0.841311 -2.199018 2.804359</Point>
+		<Point>0.947726 3.029843 -1.923700</Point>
+		<Point>2.065551 -0.038943 0.570378</Point>
+		<Point>-2.859537 0.405003 0.839084</Point>
+		<Point>-0.011940 -2.766966 0.095273</Point>
+		<Point>-2.807359 2.159103 0.594847</Point>
+		<Point>1.200207 0.925053 0.775595</Point>
+		<Point>2.851676 -2.029821 -0.157675</Point>
+		<Point>2.151385 -0.019079 1.648738</Point>
+		<Point>-2.011391 1.203997 2.603908</Point>
+		<Point>-2.119586 -0.451785 -2.878630</Point>
+		<Point>-1.723187 1.043954 2.333229</Point>
+		<Point>-0.975601 -2.970366 2.546466</Point>
+		<Point>-0.181821 2.579021 -1.080835</Point>
+		<Point>1.200739 -3.031964 0.077578</Point>
+		<Point>-1.056746 -1.029736 2.848454</Point>
+		<Point>1.573972 -1.043485 0.834613</Point>
+		<Point>-0.530642 0.480662 2.887127</Point>
+		<Point>0.727896 -2.195484 2.125417</Point>
+		<Point>1.421039 -2.457692 -2.127791</Point>
+		<Point>-1.275422 -0.480146 0.178533</Point>
+		<Point>-1.413105 2.060609 1.839621</Point>
+		<Point>-1.421583 0.726929 -2.503531</Point>
+		<Point>1.067910 -0.958835 1.064972</Point>
+		<Point>-1.286154 1.133662 -0.667444</Point>
+		<Point>-0.679725 -1.841204 1.410703</Point>
+		<Point>2.006255 2.679600 0.088719</Point>
+		<Point>-1.928038 0.646545 -1.896390</Point>
+		<Point>-0.563020 2.218434 -0.445592</Point>
+		<Point>2.674492 -0.797476 1.245619</Point>
+		<Point>0.556850 -2.507832 -0.550438</Point>
+	</Landmarks>
+	<Axis>-3 4 -3 4</Axis>
+</World>

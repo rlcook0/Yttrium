@@ -1,0 +1,491 @@
+<World>
+	<Robot Type="Sphere" Configuration="23 18" Radius="0.18" />
+	<Goal Configuration="5 20" />
+	<Obstacles>
+		<Obstacle Type="Sphere" Center="2 1" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="4 1" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="5 1" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="6 1" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="8 1" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="9 1" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="10 1" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="12 1" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="14 1" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="15 1" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="16 1" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="18 1" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="20 1" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="21 1" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="22 1" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="23 1" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="2 2" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="6 2" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="8 2" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="12 2" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="16 2" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="18 2" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="20 2" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="1 3" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="2 3" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="3 3" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="4 3" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="6 3" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="8 3" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="10 3" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="11 3" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="12 3" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="13 3" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="14 3" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="16 3" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="18 3" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="20 3" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="22 3" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="23 3" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="6 4" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="8 4" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="10 4" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="16 4" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="20 4" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="2 5" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="3 5" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="4 5" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="5 5" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="6 5" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="8 5" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="10 5" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="11 5" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="12 5" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="13 5" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="14 5" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="15 5" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="16 5" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="17 5" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="18 5" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="19 5" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="20 5" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="22 5" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="23 5" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="2 6" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="6 6" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="10 6" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="14 6" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="20 6" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="22 6" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="1 7" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="2 7" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="4 7" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="5 7" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="6 7" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="8 7" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="9 7" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="10 7" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="12 7" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="14 7" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="16 7" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="17 7" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="18 7" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="20 7" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="22 7" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="23 7" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="4 8" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="8 8" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="12 8" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="16 8" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="18 8" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="20 8" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="1 9" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="2 9" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="4 9" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="6 9" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="7 9" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="8 9" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="9 9" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="10 9" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="12 9" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="13 9" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="14 9" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="15 9" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="16 9" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="18 9" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="20 9" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="21 9" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="22 9" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="12 10" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="20 10" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="2 11" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="3 11" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="4 11" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="5 11" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="6 11" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="8 11" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="9 11" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="10 11" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="11 11" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="12 11" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="14 11" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="16 11" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="17 11" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="18 11" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="19 11" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="20 11" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="21 11" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="22 11" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="2 12" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="6 12" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="8 12" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="14 12" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="16 12" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="22 12" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="2 13" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="4 13" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="6 13" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="8 13" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="10 13" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="11 13" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="12 13" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="14 13" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="16 13" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="17 13" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="18 13" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="20 13" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="22 13" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="2 14" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="4 14" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="6 14" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="8 14" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="12 14" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="14 14" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="18 14" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="20 14" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="22 14" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="2 15" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="4 15" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="6 15" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="8 15" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="10 15" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="12 15" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="13 15" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="14 15" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="15 15" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="16 15" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="18 15" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="20 15" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="22 15" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="23 15" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="4 16" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="8 16" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="10 16" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="16 16" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="20 16" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="22 16" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="1 17" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="2 17" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="4 17" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="5 17" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="6 17" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="7 17" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="8 17" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="10 17" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="11 17" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="12 17" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="13 17" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="14 17" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="16 17" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="17 17" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="18 17" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="19 17" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="20 17" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="22 17" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="2 18" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="8 18" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="10 18" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="12 18" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="20 18" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="2 19" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="4 19" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="5 19" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="6 19" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="8 19" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="10 19" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="12 19" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="14 19" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="15 19" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="16 19" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="17 19" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="18 19" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="20 19" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="21 19" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="22 19" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="23 19" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="2 20" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="6 20" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="8 20" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="12 20" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="14 20" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="18 20" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="22 20" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="2 21" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="3 21" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="4 21" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="5 21" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="6 21" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="8 21" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="9 21" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="10 21" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="12 21" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="14 21" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="16 21" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="18 21" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="19 21" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="20 21" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="22 21" Radius="0.5" />
+	</Obstacles>
+	<Landmarks>
+		<Point>1 1</Point>
+		<Point>3 1</Point>
+		<Point>14 10</Point>
+		<Point>6 10</Point>
+		<Point>7 1</Point>
+		<Point>11 1</Point>
+		<Point>13 1</Point>
+		<Point>17 1</Point>
+		<Point>19 1</Point>
+		<Point>2 10</Point>
+		<Point>1 2</Point>
+		<Point>3 2</Point>
+		<Point>4 2</Point>
+		<Point>5 2</Point>
+		<Point>7 2</Point>
+		<Point>9 2</Point>
+		<Point>10 2</Point>
+		<Point>11 2</Point>
+		<Point>13 2</Point>
+		<Point>14 2</Point>
+		<Point>15 2</Point>
+		<Point>17 2</Point>
+		<Point>19 2</Point>
+		<Point>21 2</Point>
+		<Point>22 2</Point>
+		<Point>23 2</Point>
+		<Point>5 3</Point>
+		<Point>7 3</Point>
+		<Point>9 3</Point>
+		<Point>15 3</Point>
+		<Point>17 3</Point>
+		<Point>19 3</Point>
+		<Point>21 3</Point>
+		<Point>1 4</Point>
+		<Point>2 4</Point>
+		<Point>3 4</Point>
+		<Point>4 4</Point>
+		<Point>5 4</Point>
+		<Point>7 4</Point>
+		<Point>9 4</Point>
+		<Point>11 4</Point>
+		<Point>12 4</Point>
+		<Point>13 4</Point>
+		<Point>14 4</Point>
+		<Point>15 4</Point>
+		<Point>17 4</Point>
+		<Point>18 4</Point>
+		<Point>19 4</Point>
+		<Point>21 4</Point>
+		<Point>22 4</Point>
+		<Point>23 4</Point>
+		<Point>2 16</Point>
+		<Point>1 5</Point>
+		<Point>7 5</Point>
+		<Point>9 5</Point>
+		<Point>21 5</Point>
+		<Point>1 6</Point>
+		<Point>3 6</Point>
+		<Point>4 6</Point>
+		<Point>5 6</Point>
+		<Point>7 6</Point>
+		<Point>8 6</Point>
+		<Point>9 6</Point>
+		<Point>11 6</Point>
+		<Point>12 6</Point>
+		<Point>13 6</Point>
+		<Point>15 6</Point>
+		<Point>16 6</Point>
+		<Point>17 6</Point>
+		<Point>18 6</Point>
+		<Point>19 6</Point>
+		<Point>21 6</Point>
+		<Point>23 6</Point>
+		<Point>3 7</Point>
+		<Point>7 7</Point>
+		<Point>11 7</Point>
+		<Point>13 7</Point>
+		<Point>15 7</Point>
+		<Point>19 7</Point>
+		<Point>21 7</Point>
+		<Point>1 8</Point>
+		<Point>2 8</Point>
+		<Point>3 8</Point>
+		<Point>5 8</Point>
+		<Point>6 8</Point>
+		<Point>7 8</Point>
+		<Point>9 8</Point>
+		<Point>10 8</Point>
+		<Point>11 8</Point>
+		<Point>13 8</Point>
+		<Point>14 8</Point>
+		<Point>15 8</Point>
+		<Point>17 8</Point>
+		<Point>19 8</Point>
+		<Point>21 8</Point>
+		<Point>22 8</Point>
+		<Point>23 8</Point>
+		<Point>3 9</Point>
+		<Point>5 9</Point>
+		<Point>11 9</Point>
+		<Point>17 9</Point>
+		<Point>19 9</Point>
+		<Point>23 9</Point>
+		<Point>1 10</Point>
+		<Point>3 10</Point>
+		<Point>4 10</Point>
+		<Point>5 10</Point>
+		<Point>7 10</Point>
+		<Point>8 10</Point>
+		<Point>9 10</Point>
+		<Point>10 10</Point>
+		<Point>11 10</Point>
+		<Point>13 10</Point>
+		<Point>15 10</Point>
+		<Point>16 10</Point>
+		<Point>17 10</Point>
+		<Point>18 10</Point>
+		<Point>19 10</Point>
+		<Point>21 10</Point>
+		<Point>22 10</Point>
+		<Point>23 10</Point>
+		<Point>1 11</Point>
+		<Point>7 11</Point>
+		<Point>13 11</Point>
+		<Point>15 11</Point>
+		<Point>23 11</Point>
+		<Point>1 12</Point>
+		<Point>3 12</Point>
+		<Point>4 12</Point>
+		<Point>5 12</Point>
+		<Point>7 12</Point>
+		<Point>9 12</Point>
+		<Point>10 12</Point>
+		<Point>11 12</Point>
+		<Point>12 12</Point>
+		<Point>13 12</Point>
+		<Point>15 12</Point>
+		<Point>17 12</Point>
+		<Point>18 12</Point>
+		<Point>19 12</Point>
+		<Point>20 12</Point>
+		<Point>21 12</Point>
+		<Point>23 12</Point>
+		<Point>1 13</Point>
+		<Point>3 13</Point>
+		<Point>5 13</Point>
+		<Point>7 13</Point>
+		<Point>9 13</Point>
+		<Point>13 13</Point>
+		<Point>15 13</Point>
+		<Point>19 13</Point>
+		<Point>21 13</Point>
+		<Point>23 13</Point>
+		<Point>1 14</Point>
+		<Point>3 14</Point>
+		<Point>5 14</Point>
+		<Point>7 14</Point>
+		<Point>9 14</Point>
+		<Point>10 14</Point>
+		<Point>11 14</Point>
+		<Point>13 14</Point>
+		<Point>15 14</Point>
+		<Point>16 14</Point>
+		<Point>17 14</Point>
+		<Point>19 14</Point>
+		<Point>21 14</Point>
+		<Point>23 14</Point>
+		<Point>1 15</Point>
+		<Point>3 15</Point>
+		<Point>5 15</Point>
+		<Point>7 15</Point>
+		<Point>9 15</Point>
+		<Point>11 15</Point>
+		<Point>17 15</Point>
+		<Point>19 15</Point>
+		<Point>21 15</Point>
+		<Point>1 16</Point>
+		<Point>3 16</Point>
+		<Point>5 16</Point>
+		<Point>6 16</Point>
+		<Point>7 16</Point>
+		<Point>9 16</Point>
+		<Point>11 16</Point>
+		<Point>12 16</Point>
+		<Point>13 16</Point>
+		<Point>14 16</Point>
+		<Point>15 16</Point>
+		<Point>17 16</Point>
+		<Point>18 16</Point>
+		<Point>19 16</Point>
+		<Point>21 16</Point>
+		<Point>23 16</Point>
+		<Point>3 17</Point>
+		<Point>9 17</Point>
+		<Point>15 17</Point>
+		<Point>21 17</Point>
+		<Point>23 17</Point>
+		<Point>1 18</Point>
+		<Point>3 18</Point>
+		<Point>4 18</Point>
+		<Point>5 18</Point>
+		<Point>6 18</Point>
+		<Point>7 18</Point>
+		<Point>9 18</Point>
+		<Point>11 18</Point>
+		<Point>13 18</Point>
+		<Point>14 18</Point>
+		<Point>15 18</Point>
+		<Point>16 18</Point>
+		<Point>17 18</Point>
+		<Point>18 18</Point>
+		<Point>19 18</Point>
+		<Point>21 18</Point>
+		<Point>22 18</Point>
+		<Point>23 18</Point>
+		<Point>1 19</Point>
+		<Point>3 19</Point>
+		<Point>7 19</Point>
+		<Point>9 19</Point>
+		<Point>11 19</Point>
+		<Point>13 19</Point>
+		<Point>19 19</Point>
+		<Point>1 20</Point>
+		<Point>3 20</Point>
+		<Point>4 20</Point>
+		<Point>7 20</Point>
+		<Point>9 20</Point>
+		<Point>10 20</Point>
+		<Point>11 20</Point>
+		<Point>13 20</Point>
+		<Point>15 20</Point>
+		<Point>16 20</Point>
+		<Point>17 20</Point>
+		<Point>19 20</Point>
+		<Point>20 20</Point>
+		<Point>21 20</Point>
+		<Point>23 20</Point>
+		<Point>1 21</Point>
+		<Point>7 21</Point>
+		<Point>11 21</Point>
+		<Point>13 21</Point>
+		<Point>15 21</Point>
+		<Point>17 21</Point>
+		<Point>21 21</Point>
+		<Point>23 21</Point>
+	</Landmarks>
+	<Axis>0 24 0 22</Axis>
+</World>

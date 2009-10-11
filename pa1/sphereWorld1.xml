@@ -1,0 +1,44 @@
+<World>
+	<Robot Type="Sphere" Configuration="0 5" Radius="0.18" />
+	<Goal Configuration="0 0" />
+	<Obstacles>
+		<Obstacle Type="Sphere" Center="0 2.5" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="1.5 2.5" Radius="0.5" />
+		<Obstacle Type="Sphere" Center="-2.5 2.5" Radius="0.2" />
+		<Obstacle Type="Sphere" Center="-1.8 1" Radius="0.3" />
+		<Obstacle Type="Sphere" Center="2 0" Radius="0.3" />
+	</Obstacles>
+	<Landmarks>
+	    <Point>-2.1836    5.0850</Point>
+        <Point>0.4782    2.8490</Point>
+		<Point>-2.1303    4.9712</Point>
+        <Point>0.7323    1.4567</Point>
+        <Point>0.0795    1.8127</Point>
+		<Point>-2.5442    0.6794</Point>
+		<Point>-2.2601    0.2874</Point>
+		<Point>-1.5603    1.9209</Point>
+		<Point>-2.7021    5.3190</Point>
+        <Point>2.6687    2.4360</Point>
+		<Point>-0.0645    1.3640</Point>
+        <Point>2.4003    1.5847</Point>
+		<Point>-2.3328    4.4618</Point>
+		<Point>-0.6616    0.6918</Point>
+		<Point>-0.5765   -0.3248</Point>
+		<Point>-2.2082    5.5944</Point>
+        <Point>2.7368    3.0265</Point>
+		<Point>-2.6413    0.6435</Point>
+		<Point>-0.8810    4.7484</Point>
+		<Point>-2.9076   -0.6988</Point>
+		<Point>-1.9861    3.5438</Point>
+        <Point>1.3903    3.5342</Point>
+		<Point>-0.2945    2.8291</Point>
+		<Point>-1.2221    4.2128</Point>
+		<Point>-1.8663    3.8074</Point>
+		<Point>-1.8989    1.5794</Point>
+        <Point>0.7537    4.4616</Point>
+		<Point>-2.5132    5.5057</Point>
+        <Point>1.6543    2.4075</Point>
+		<Point>-0.3848    2.1275</Point>
+	</Landmarks>
+	<Axis>-3 3 -1 6</Axis>
+</World>
