@@ -2,6 +2,8 @@ function [path,cost,nodesExpanded] = uniformCostSearch(World)
 
 heap = heapCreate();
 
+expanded = []
+
 first_node.value = 1;
 first_node.path = [1];
 heap = heapPush(heap, first_node);
@@ -9,19 +11,29 @@ heap = heapPush(heap, first_node);
 nodesExpanded = 0;
 
 while ~heapIsEmpty(heap)
-    10000
     [top, heap] = heapPop(heap);
-    last = top.path(length(top.path))
+        
+    last = top.path(length(top.path));
     if (last == size(World.Landmarks, 2))
-        path = top.path;
+        path = top.path
         cost = top.value;
+        x = 2
         return;
     end
     
     successors = find(World.Connectivity(:,last));
     for suc_num = 1:size(successors)
+        suc = successors(suc_num);
+
+        find(expanded == suc, 1);
+        size(find(expanded == suc, 1), 2);
+        
+        if (size(find(expanded == suc, 1), 2) ~= 0)    
+            continue;
+        end
+        
+        expanded = [expanded suc]
         nodesExpanded = nodesExpanded + 1;
-        suc = successors(suc_num)
         
         World.Landmarks(:,last);
         World.Landmarks(:,suc);
@@ -32,7 +44,11 @@ while ~heapIsEmpty(heap)
     end
 end
 
-x = 1;
+x = 1
+
+path = [];
+cost = inf;
+
 %Does uniform-cost search.
 %  path = uniformCostSearch(World).
 
