@@ -10,57 +10,72 @@ function [path,cost,nodesExpanded] = AstarSearch(World)
 
 heap = heapCreate();
 
+% List to capture all the nodes we have expanded so far.
 expanded = [];
+nodesExpanded = 0;
 
-first_node.value = 0;
-first_node.sofar = 0;
+% Put the first node in the queue/heap.
+first_node.sofar = 0;   % cost so far
+first_node.value = 0;   % heuristic + cost so far
 first_node.path = [1];
 heap = heapPush(heap, first_node);
 
-nodesExpanded = 0;
-
 while ~heapIsEmpty(heap)
-    [top, heap] = heapPop(heap);
+    [curr, heap] = heapPop(heap);
+    
+    % Grab the last node in the path.
+    curr_index = curr.path(length(curr.path));
+    
+    % Check if the last node in the path is a goal.
+    if (curr_index == size(World.Landmarks, 2))
+        path = curr.path;
+        cost = curr.value;
         
-    last = top.path(length(top.path));
-    if (last == size(World.Landmarks, 2))
-        path = top.path
-        cost = top.sofar;
-        x = 2
+        fprintf('ANSWER:');
+        for node_num = 1:length(path)
+            coord = World.Landmarks(:,path(node_num));
+            fprintf('(%f, %f) ', coord(1), coord(2));
+        end
+        fprintf('\n');
+        
         return;
     end
     
-    successors = find(World.Connectivity(:,last));
-    for suc_num = 1:size(successors)
-        suc = successors(suc_num);
-
-        find(expanded == suc, 1);
-        size(find(expanded == suc, 1), 2);
+    % Loop over all successors of the current node.
+    successors = find(World.Connectivity(:,curr_index));
+    for successor_num = 1:size(successors)
+        successor = successors(successor_num);
         
-        if (size(find(expanded == suc, 1), 2) ~= 0)    
+        % Check if we have already expanded this node.
+        if (size(find(expanded == successor, 1), 2) ~= 0)    
             continue;
         end
         
-        expanded = [expanded suc];
+        % Since we haven't...
         nodesExpanded = nodesExpanded + 1;
         
-        World.Landmarks(:,last);
-        World.Landmarks(:,suc);
-        dFrom = sqrt(sum((World.Landmarks(:,last) - World.Landmarks(:,suc)) .^ 2));
-        dTo   = sqrt(sum((World.Landmarks(:,size(World.Landmarks, 2)) - World.Landmarks(:,suc)) .^ 2));
-        new_node.value = top.sofar + dFrom + dTo;
-        new_node.sofar = top.sofar + dFrom;
-        new_node.path = [top.path suc];
+        % Add successor to the path.
+        expanded = [expanded successor];
+        
+        % Make a new node.
+        dFrom = sqrt(sum((World.Landmarks(:,curr_index) - World.Landmarks(:,successor)) .^ 2));
+        dTo   = sqrt(sum((World.Landmarks(:,end)        - World.Landmarks(:,successor)) .^ 2));
+        
+        new_node.sofar = curr.sofar + dFrom;
+        new_node.value = curr.sofar + dFrom + dTo;
+        new_node.path = [curr.path successor];
+        
         heap = heapPush(heap, new_node);
+        
+        % TESTING - REMOVE ME
+        for node_num = 1:length(new_node.path)
+            coord = World.Landmarks(:,new_node.path(node_num));
+            fprintf('(%f, %f) ', coord(1), coord(2));
+        end
+        fprintf('\n');
     end
 end
 
-x = 1
-
+% e.g. return FAIL
 path = [];
 cost = inf;
-
-% path = [1 size(World.Landmarks,2)];
-% cost = norm(World.Landmarks(:,1) - World.Landmarks(:,end));
-% nodesExpanded = 0;
-
