@@ -31,7 +31,6 @@ while ~heapIsEmpty(heap)
     curr_index = curr.path(length(curr.path));
     costThusFar = costThusFar + curr.distanceFromPrev;
     
-    
     % Check if the last node in the path is a goal.
     if (curr_index == size(World.Landmarks, 2))
         path = curr.path;
