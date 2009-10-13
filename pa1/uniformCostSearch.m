@@ -17,7 +17,7 @@ while ~heapIsEmpty(heap)
     curr = top.path(length(top.path));
     
     % Check if the last node in the path is a goal.
-    if (last_in_path == size(World.Landmarks, 2))
+    if (curr == size(World.Landmarks, 2))
         path = top.path;
         cost = top.value;
         return;
@@ -40,9 +40,9 @@ while ~heapIsEmpty(heap)
         expanded = [expanded successor];
         
         % Make a new node.
-        distance = sqrt(sum((World.Landmarks(:,curr) - World.Landmarks(:,suc)) .^ 2));
+        distance = sqrt(sum((World.Landmarks(:,curr) - World.Landmarks(:,successor)) .^ 2));
         new_node.value = top.value + distance;
-        new_node.path = [top.path suc];
+        new_node.path = [top.path successor];
         heap = heapPush(heap, new_node);
     end
 end
