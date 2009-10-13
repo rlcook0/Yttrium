@@ -40,6 +40,12 @@ while ~heapIsEmpty(heap)
         
         return;
     end
+        
+    % Since we haven't...
+    nodesExpanded = nodesExpanded + 1;
+        
+    % Track this node as expanded
+    expanded = [expanded curr_index];
     
     % Loop over all successors of the current node.
     successors = find(World.Connectivity(:,curr_index));
@@ -51,11 +57,6 @@ while ~heapIsEmpty(heap)
             continue;
         end
         
-        % Since we haven't...
-        nodesExpanded = nodesExpanded + 1;
-        
-        % Add successor to the path.
-        expanded = [expanded successor];
         
         % Make a new node.
         dFrom = sqrt(sum((World.Landmarks(:,curr_index) - World.Landmarks(:,successor)) .^ 2));
@@ -67,12 +68,6 @@ while ~heapIsEmpty(heap)
         
         heap = heapPush(heap, new_node);
         
-        % TESTING - REMOVE ME
-        for node_num = 1:length(new_node.path)
-            coord = World.Landmarks(:,new_node.path(node_num));
-            fprintf('(%f, %f) ', coord(1), coord(2));
-        end
-        fprintf('\n');
     end
 end
 

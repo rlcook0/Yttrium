@@ -8,7 +8,7 @@ function [path,cost,nodesExpanded] = bestFirstSearch(World)
 % two points are not likely to be visible from each other). Delete these
 % lines and implement a full, general search.
 
-[path, cost, nodesExpanded] = uniformCostSearch(World);
+[path, cost, nodesExpanded] = AstarSearch(World);
 
 %path = [1 size(World.Landmarks,2)];
 %cost = norm(World.Landmarks(:,1) - World.Landmarks(:,end));

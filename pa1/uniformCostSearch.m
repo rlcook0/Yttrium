@@ -33,6 +33,10 @@ while ~heapIsEmpty(heap)
         return;
     end
     
+    % Since we haven't...
+    nodesExpanded = nodesExpanded + 1;
+        
+    % Track this node as expanded
     expanded = [expanded curr_index];
     
     % Loop over all successors of the current node.
@@ -44,12 +48,7 @@ while ~heapIsEmpty(heap)
         if (size(find(expanded == successor, 1), 2) ~= 0)    
             continue;
         end
-        
-        % Since we haven't...
-        nodesExpanded = nodesExpanded + 1;
-        
-        % Add successor to the path.
-        
+       
         
         % Make a new node.
         distance = sqrt(sum((World.Landmarks(:,curr_index) - World.Landmarks(:,successor)) .^ 2));
