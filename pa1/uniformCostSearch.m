@@ -12,14 +12,15 @@ first_node.path = [1];
 heap = heapPush(heap, first_node);
 
 while ~heapIsEmpty(heap)
+    [curr, heap] = heapPop(heap);
+    
     % Grab the last node in the path.
-    [top, heap] = heapPop(heap);
-    curr = top.path(length(top.path));
+    curr_index = curr.path(length(curr.path));
     
     % Check if the last node in the path is a goal.
-    if (curr == size(World.Landmarks, 2))
-        path = top.path;
-        cost = top.value;
+    if (curr_index == size(World.Landmarks, 2))
+        path = curr.path;
+        cost = curr.value;
         
         fprintf('ANSWER:');
         for node_num = 1:length(path)
@@ -32,7 +33,7 @@ while ~heapIsEmpty(heap)
     end
     
     % Loop over all successors of the current node.
-    successors = find(World.Connectivity(:,curr));
+    successors = find(World.Connectivity(:,curr_index));
     for successor_num = 1:size(successors)
         successor = successors(successor_num);
         
@@ -48,9 +49,9 @@ while ~heapIsEmpty(heap)
         expanded = [expanded successor];
         
         % Make a new node.
-        distance = sqrt(sum((World.Landmarks(:,curr) - World.Landmarks(:,successor)) .^ 2));
-        new_node.value = top.value + distance;
-        new_node.path = [top.path successor];
+        distance = sqrt(sum((World.Landmarks(:,curr_index) - World.Landmarks(:,successor)) .^ 2));
+        new_node.value = curr.value + distance;
+        new_node.path = [curr.path successor];
         heap = heapPush(heap, new_node);
         
         % TESTING - REMOVE ME
