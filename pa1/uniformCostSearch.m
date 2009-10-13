@@ -7,7 +7,7 @@ expanded = [];
 nodesExpanded = 0;
 
 % Put the first node in the queue/heap.
-first_node.value = 1;
+first_node.value = 0;
 first_node.path = [1];
 heap = heapPush(heap, first_node);
 
@@ -20,6 +20,14 @@ while ~heapIsEmpty(heap)
     if (curr == size(World.Landmarks, 2))
         path = top.path;
         cost = top.value;
+        
+        fprintf('ANSWER:');
+        for node_num = 1:length(path)
+            coord = World.Landmarks(:,path(node_num));
+            fprintf('(%f, %f) ', coord(1), coord(2));
+        end
+        fprintf('\n');
+        
         return;
     end
     
@@ -44,6 +52,13 @@ while ~heapIsEmpty(heap)
         new_node.value = top.value + distance;
         new_node.path = [top.path successor];
         heap = heapPush(heap, new_node);
+        
+        % TESTING - REMOVE ME
+        for node_num = 1:length(new_node.path)
+            coord = World.Landmarks(:,new_node.path(node_num));
+            fprintf('(%f, %f) ', coord(1), coord(2));
+        end
+        fprintf('\n');
     end
 end
 
