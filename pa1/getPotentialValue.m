@@ -15,7 +15,7 @@ function value = getPotentialValue(World,config)
 %  a row vector.
 
 % Constant
-alpha = 1;
+alpha = 3;
 repulsive_field_distance = 1;
 
 repulsive_potential = 0;
