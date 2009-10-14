@@ -14,7 +14,9 @@ function value = getPotentialValue(World,config)
 %  World.obstacles.Radii, which has the radii of all obstacles collected in
 %  a row vector.
 
+% Constant
 alpha = 1;
+repulsive_field_distance = 1;
 
 repulsive_potential = 0;
 robot_radius = World.robot.Radius;
@@ -22,18 +24,22 @@ for obstacle_num = 1:length(World.obstacles.Centers)
     center = World.obstacles.Centers(:,obstacle_num);
     radius = World.obstacles.Radii(obstacle_num);
     
-    distance = sqrt(sum((center' - config) .^ 2));
+    % Euclidean distance.
+    distance_from_center = sqrt(sum((center' - config) .^ 2));
+    distance_from_edge = distance -(radius + robot_radius);
     
-    if (distance < radius + robot_radius)
+    if (distance_from_edge <= 0)
+        % You are inside an obstacle.
         value = inf;
         return;
-    elseif (distance -(radius + robot_radius) < 1)
-        dist = distance -(radius + robot_radius);
-        repulse = 1 / (1 + dist)^2 - (1/4);
+    elseif (distance_from_edge < repulsive_field_distance)
+        % Close enough to feel the pain.
+        repulse = 1 / (1 + distance_from_edge)^2 - (1/4);
         repulsive_potential = repulsive_potential + repulse;
     end
 end
 
+% Euclidian distance.
 attractive_potential = sqrt(sum((World.goal.Configuration - config) .^ 2));
 
 value = attractive_potential + alpha * repulsive_potential;
