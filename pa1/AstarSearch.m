@@ -2,12 +2,6 @@ function [path,cost,nodesExpanded] = AstarSearch(World)
 %Does A* search.
 %  path = AstarSearch(World).
 
-% *** YOU MUST IMPLEMENT THIS SEARCH YOURSELF ***
-% The lines below create a path that tries to go directly from the starting
-% configuration to the goal, but such a path is likely invalid (as these
-% two points are not likely to be visible from each other). Delete these
-% lines and implement a full, general search.
-
 heap = heapCreate();
 
 % List to capture all the nodes we have expanded so far.
@@ -30,44 +24,32 @@ while ~heapIsEmpty(heap)
     if (curr_index == size(World.Landmarks, 2))
         path = curr.path;
         cost = curr.value;
-        
-        fprintf('ANSWER:');
-        for node_num = 1:length(path)
-            coord = World.Landmarks(:,path(node_num));
-            fprintf('(%f, %f) ', coord(1), coord(2));
-        end
-        fprintf('\n');
-        
         return;
     end
         
+    % Check if we have already expanded this node.
+    if (size(find(expanded == curr_index, 1), 2) ~= 0)    
+        continue;
+    end
+    
     % Since we haven't...
     nodesExpanded = nodesExpanded + 1;
-        
-    % Track this node as expanded
     expanded = [expanded curr_index];
     
     % Loop over all successors of the current node.
     successors = find(World.Connectivity(:,curr_index));
     for successor_num = 1:size(successors)
-        successor = successors(successor_num);
-        
-        % Check if we have already expanded this node.
-        if (size(find(expanded == successor, 1), 2) ~= 0)    
-            continue;
-        end
-        
+        successor_index = successors(successor_num);
         
         % Make a new node.
-        dFrom = sqrt(sum((World.Landmarks(:,curr_index) - World.Landmarks(:,successor)) .^ 2));
-        dTo   = sqrt(sum((World.Landmarks(:,end)        - World.Landmarks(:,successor)) .^ 2));
+        dFrom = sqrt(sum((World.Landmarks(:,curr_index) - World.Landmarks(:,successor_index)) .^ 2));
+        dTo   = sqrt(sum((World.Landmarks(:,end)        - World.Landmarks(:,successor_index)) .^ 2));
         
         new_node.sofar = curr.sofar + dFrom;
         new_node.value = curr.sofar + dFrom + dTo;
-        new_node.path = [curr.path successor];
+        new_node.path = [curr.path successor_index];
         
         heap = heapPush(heap, new_node);
-        
     end
 end
 

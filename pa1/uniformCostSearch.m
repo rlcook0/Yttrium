@@ -24,26 +24,26 @@ while ~heapIsEmpty(heap)
         return;
     end
     
+    % Check if we have already expanded this node.
+    if (size(find(expanded == curr_index, 1), 2) ~= 0)    
+        continue;
+    end
+    
     % Since we haven't...
     nodesExpanded = nodesExpanded + 1;
-        
-    % Track this node as expanded
     expanded = [expanded curr_index];
     
     % Loop over all successors of the current node.
     successors = find(World.Connectivity(:,curr_index));
     for successor_num = 1:size(successors)
-        successor = successors(successor_num);
-        
-        % Check if we have already expanded this node.
-        if (size(find(expanded == successor, 1), 2) ~= 0)    
-            continue;
-        end
-        
+        successor_index = successors(successor_num);
+
         % Make a new node.
-        distance = sqrt(sum((World.Landmarks(:,curr_index) - World.Landmarks(:,successor)) .^ 2));
+        distance = sqrt(sum((World.Landmarks(:,curr_index) - World.Landmarks(:,successor_index)) .^ 2));
+        
         new_node.value = curr.value + distance;
-        new_node.path = [curr.path successor];
+        new_node.path = [curr.path successor_index];
+        
         heap = heapPush(heap, new_node);
     end
 end
