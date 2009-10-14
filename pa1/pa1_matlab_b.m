@@ -11,7 +11,7 @@ world3 = 'sphereWorld3.xml';
 world4 = 'armWorld1.xml';
 world5 = 'armWorld2.xml';
 
-World = readAndDisplayWorld(world3);
+World = readAndDisplayWorld(world0);
 % World will contain members World.robot, World.goal, and World.obstacles.
 % World.robot.Configuration specifies the robot's starting configuration,
 % and World.goal.Configuration specifies the desired goal configuration of
