@@ -26,7 +26,7 @@ for obstacle_num = 1:length(World.obstacles.Centers)
     
     % Euclidean distance.
     distance_from_center = sqrt(sum((center' - config) .^ 2));
-    distance_from_edge = distance -(radius + robot_radius);
+    distance_from_edge = distance_from_center -(radius + robot_radius);
     
     if (distance_from_edge <= 0)
         % You are inside an obstacle.
