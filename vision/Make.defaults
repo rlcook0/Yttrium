@@ -1,0 +1,13 @@
+## ---------------------------------------------------------------------------
+## CS221 Computer Vision Project, 2006
+## Copyright (c) 2006, Stanford University
+##
+## Make.defaults
+## ---------------------------------------------------------------------------
+
+# OpenCV library location
+OPENCV_INC_DIR=/afs/ir.stanford.edu/class/cs221/stairvision/external/opencv/include
+OPENCV_LIB_DIR=/afs/ir.stanford.edu/class/cs221/stairvision/external/opencv/lib
+
+XML_INC_DIR=/afs/ir.stanford.edu/class/cs221/stairvision/external
+XML_LIB=/afs/ir.stanford.edu/class/cs221/stairvision/external/xmlParser/xmlParser.a
