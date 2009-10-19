@@ -34,6 +34,10 @@ Classifier::Classifier()
 
     _features.load("dict.xml");
     mugFeatures = std::vector<double>(_features.numFeatures());
+    mugFeatures[0] = 1;
+    for (int i = 1; i < mugFeatures.size(); i++) {
+        mugFeatures[i] = 0;
+    }
 
     // CS221 TO DO: add initialization for any member variables   
 }
@@ -112,34 +116,79 @@ bool Classifier::run(const IplImage *frame, CObjectList *objects, bool scored)
     objects->push_back(obj);        
   }*/
   
-  cout << "Starting classification" << endl;
-  IplImage *dst = cvCreateImage(cvSize(frame->width / 2.0, frame->height / 2.0), frame->depth, frame->nChannels);
-  //cvResize(frame, dst);
+  // convert to grayscale
+  IplImage *gray = cvCreateImage(cvGetSize(frame), IPL_DEPTH_8U, 1);
+  cvCvtColor(frame, gray, CV_BGR2GRAY);
+  
+  // resize
+  IplImage *dst = cvCreateImage(cvSize(gray->width / 2.0, gray->height / 2.0), gray->depth, gray->nChannels);
+  cvResize(gray, dst);
   
   int numLayers = 6;
   double currFactor = 2.0;
+  TemplateMatcher tm;
   while(numLayers-- > 0) {
-    cout << "Layer #" << numLayers << endl;
-    TemplateMatcher tm;
-    tm.loadFrame(frame);
-    cout << "Loaded frame" << endl;
+    cout << "size #" << numLayers << endl;
+    tm.loadFrame(dst);
     
-    // Compute Ezx.
-    double z = 0;
+    // Store feature maps.
+    std::vector<IplImage *> images;
     for (unsigned featureNum = 0; featureNum < _features.numFeatures(); featureNum++) {
-        cout << "feature #" << featureNum << endl; 
+        cout << "feature #" << featureNum << endl;       
+        
         FeatureDefinition *fd = _features.getFeature(featureNum);
-        IplImage *featureMap = cvCreateImage(cvSize(fd->getTemplateWidth(), fd->getTemplateHeight()), frame->depth, frame->nChannels);
+        CvRect r = fd->getValidRect();
+        
+        //cout << "width: " << fd->getTemplateWidth() << " height: " << fd->getTemplateHeight() << endl;
+        //cout << "rect x: " << r.x << " y: " << r.y << " width: " << r.width << " height: " << r.height << endl;
+        //cout << "dst width: " << dst->width << " height: " << dst->height << endl;
+        
+        CvSize newSize = cvSize(dst->width - fd->getTemplateWidth() + 1, dst->height - fd->getTemplateHeight() + 1);
+        IplImage *featureMap = cvCreateImage(newSize, IPL_DEPTH_32F, 1);
         tm.makeResponseImage(fd->getTemplate(), featureMap);
+        images.push_back(featureMap);
     }
-  
+    
+    // Compute sum of theta(i) x(i).
+    int bestX, bestY;
+    double bestScore = -1;
+    for (int x = 0; x < 50; x += 8) {
+        for (int y = 0; y < 50; y += 8) {
+            double score = 0;
+            for (unsigned featureNum = 0; featureNum < _features.numFeatures(); featureNum++) {
+                FeatureDefinition *fd = _features.getFeature(featureNum);
+                CvRect r = fd->getValidRect();
+                
+                double value = cvGetReal2D(x + r.x, y + r.y);
+                score += value * mugFeatures[i];
+            }
+            
+            if (score > bestScore) {
+                bestScore = score;
+                bestX = x;
+                bestY = y;
+            }
+        }
+    }
+    
+    double score = 1.0 / (1.0 + exp(-1.0 * bestScore));
+    if (score > 0.5) {
+        CObject obj;
+        obj.rect = cvRect(bestX, bestY, 10, 10);
+        obj.label = "cup";
+        objects->push_back(obj); 
+    }
+    
     // Do new resize.
     cout << "Resizing..." << endl;
     currFactor *= 1.2;
-    CvSize newSize = cvSize(dst->width / currFactor, dst->height / currFactor);
-    cvReleaseImage(&dst);
-    dst = cvCreateImage(newSize, frame->depth, frame->nChannels);
-    cvResize(frame, dst);
+    IplImage *old = dst;
+    
+    CvSize newSize = cvSize(gray->width / currFactor, gray->height / currFactor);
+    dst = cvCreateImage(newSize, gray->depth, gray->nChannels);
+    cvResize(gray, dst);
+    
+    cvReleaseImage(&old);
   }
   
   return true;

@@ -35,6 +35,7 @@ protected:
     CvRNG rng;
 
     // CS221 TO DO: ADD YOUR MEMBER VARIABLES HERE
+    std::vector<double> mugFeatures;
     
 public:
     // constructors
