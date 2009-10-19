@@ -193,7 +193,18 @@ bool Classifier::run(const IplImage *frame, CObjectList *objects, bool scored)
   
   return true;
 }
-        
+
+/*
+bool Classifier::train(TTrainingFileList& fileList)
+{
+    cout << "Training to be a champ!" << endl;
+    
+    //TODO JUAN -- add LogReg use here!
+    
+    cout << "I'm ready. Let's DO THIS!" << endl;
+}
+*/
+
 // train
 // Trains the classifier to recognize the objects given in the
 // training file list.
