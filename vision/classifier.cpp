@@ -99,7 +99,18 @@ bool Classifier::run(const IplImage *frame, CObjectList *objects, bool scored)
   
   return true;
 }
-        
+
+/*
+bool Classifier::train(TTrainingFileList& fileList)
+{
+    cout << "Training to be a champ!" << endl;
+    
+    //TODO JUAN -- add LogReg use here!
+    
+    cout << "I'm ready. Let's DO THIS!" << endl;
+}
+*/
+
 // train
 // Trains the classifier to recognize the objects given in the
 // training file list.
@@ -140,9 +151,9 @@ bool Classifier::train(TTrainingFileList& fileList)
 	    // load the image
 	    image = cvLoadImage(fileList.files[i].filename.c_str(), 0);
 	    if (image == NULL) {
-		cerr << "ERROR: could not load image "
-		     << fileList.files[i].filename.c_str() << endl;
-		continue;
+		    cerr << "ERROR: could not load image "
+    		     << fileList.files[i].filename.c_str() << endl;
+    		continue;
 	    }
 
 	    // resize to 64 x 64
