@@ -20,6 +20,7 @@
 #include "highgui.h"
 
 #include "classifier.h"
+#include "template.h"
 
 using namespace std;
 
@@ -32,7 +33,7 @@ Classifier::Classifier()
     rng = cvRNG(-1);
 
     _features.load("dict.xml");
-    
+    mugFeatures = std::vector<double>(_features.numFeatures());
 
     // CS221 TO DO: add initialization for any member variables   
 }
@@ -50,7 +51,16 @@ bool Classifier::loadState(const char *filename)
 {
     assert(filename != NULL);
     
-    // CS221 TO DO: replace this with your own configuration code
+    ifstream infile;
+    infile.open(filename);
+    
+    double val;
+    while(!infile.fail() && !infile.eof()) {
+        infile >> val;
+        if (infile.fail() || infile.eof()) return true;
+        
+        mugFeatures.push_back(val);
+    }
     
     return true;
 }
@@ -61,7 +71,12 @@ bool Classifier::saveState(const char *filename)
 {
     assert(filename != NULL);
     
-    // CS221 TO DO: replace this with your own configuration code
+    ofstream outfile;
+    outfile.open(filename);
+    for (unsigned i = 0; i < mugFeatures.size(); i++) {
+        outfile << mugFeatures[i] << ' ';
+    }
+    outfile.close();
     
     return true;
 }
@@ -84,7 +99,7 @@ bool Classifier::run(const IplImage *frame, CObjectList *objects, bool scored)
   
   // Example code which returns up to 10 random objects, each object
   // having a width and height equal to half the frame size.
-  const char *labels[5] = {
+  /*const char *labels[5] = {
     "mug", "stapler", "keyboard", "clock", "scissors"
   }; 
   int n = cvRandInt(&rng) % 10;
@@ -95,6 +110,36 @@ bool Classifier::run(const IplImage *frame, CObjectList *objects, bool scored)
     obj.rect.y = cvRandInt(&rng) % (frame->height - obj.rect.height);
     obj.label = string(labels[cvRandInt(&rng) % 5]);
     objects->push_back(obj);        
+  }*/
+  
+  cout << "Starting classification" << endl;
+  IplImage *dst = cvCreateImage(cvSize(frame->width / 2.0, frame->height / 2.0), frame->depth, frame->nChannels);
+  //cvResize(frame, dst);
+  
+  int numLayers = 6;
+  double currFactor = 2.0;
+  while(numLayers-- > 0) {
+    cout << "Layer #" << numLayers << endl;
+    TemplateMatcher tm;
+    tm.loadFrame(frame);
+    cout << "Loaded frame" << endl;
+    
+    // Compute Ezx.
+    double z = 0;
+    for (unsigned featureNum = 0; featureNum < _features.numFeatures(); featureNum++) {
+        cout << "feature #" << featureNum << endl; 
+        FeatureDefinition *fd = _features.getFeature(featureNum);
+        IplImage *featureMap = cvCreateImage(cvSize(fd->getTemplateWidth(), fd->getTemplateHeight()), frame->depth, frame->nChannels);
+        tm.makeResponseImage(fd->getTemplate(), featureMap);
+    }
+  
+    // Do new resize.
+    cout << "Resizing..." << endl;
+    currFactor *= 1.2;
+    CvSize newSize = cvSize(dst->width / currFactor, dst->height / currFactor);
+    cvReleaseImage(&dst);
+    dst = cvCreateImage(newSize, frame->depth, frame->nChannels);
+    cvResize(frame, dst);
   }
   
   return true;
@@ -139,31 +184,31 @@ bool Classifier::train(TTrainingFileList& fileList)
     cout << "Processing images..." << endl;
     smallImage = cvCreateImage(cvSize(64, 64), IPL_DEPTH_8U, 1);
     for (int i = 0; i < (int)fileList.files.size(); i++) {
-	// show progress
-	if (i % 1000 == 0) {
-	    showProgress(i, fileList.files.size());
-	}
+        // show progress
+        if (i % 1000 == 0) {
+            showProgress(i, fileList.files.size());
+        }
 
-	// skip non-mug and non-other images (milestone only)
-	if ((fileList.files[i].label == "mug") ||
-	    (fileList.files[i].label == "other")) {
-	    
-	    // load the image
-	    image = cvLoadImage(fileList.files[i].filename.c_str(), 0);
-	    if (image == NULL) {
-		    cerr << "ERROR: could not load image "
-    		     << fileList.files[i].filename.c_str() << endl;
-    		continue;
-	    }
+        // skip non-mug and non-other images (milestone only)
+        if ((fileList.files[i].label == "mug") ||
+            (fileList.files[i].label == "other")) {
+            
+            // load the image
+            image = cvLoadImage(fileList.files[i].filename.c_str(), 0);
+            if (image == NULL) {
+                cerr << "ERROR: could not load image "
+                     << fileList.files[i].filename.c_str() << endl;
+                continue;
+            }
 
-	    // resize to 64 x 64
-	    cvResize(image, smallImage);
+            // resize to 64 x 64
+            cvResize(image, smallImage);
 
-	    // CS221 TO DO: extract features from image here
+            // CS221 TO DO: extract features from image here
 
-	    // free memory
-	    cvReleaseImage(&image);
-	}
+            // free memory
+            cvReleaseImage(&image);
+        }
     }
 
     // free memory
