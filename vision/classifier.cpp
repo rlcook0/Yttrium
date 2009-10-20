@@ -135,8 +135,8 @@ bool Classifier::run(const IplImage *frame, CObjectList *objects, bool scored)
     // Compute sum of theta(i) x(i).
     int bestX, bestY;
     double bestScore = -1;
-    for (int x = 0; x < maxWidth - 1; x += 8) {
-        for (int y = 0; y < maxHeight - 1; y += 8) {
+    for (int x = 0; x < maxWidth - 32; x += 8) {
+        for (int y = 0; y < maxHeight - 32; y += 8) {
         
             double score = 0;
             for (unsigned featureNum = 0; featureNum < _features.numFeatures(); featureNum++) {
@@ -155,6 +155,10 @@ bool Classifier::run(const IplImage *frame, CObjectList *objects, bool scored)
                 bestY = y;
             }
         }
+    }
+    
+    for (int imageNum = 0; i < images.size(); i++) {
+        cvReleaseImage(&images[imageNum]);
     }
     
     // Logistic regression.
@@ -179,6 +183,7 @@ bool Classifier::run(const IplImage *frame, CObjectList *objects, bool scored)
     cvReleaseImage(&old);
   }
   
+  cvReleaseImage(&gray);
   return true;
 }
 
