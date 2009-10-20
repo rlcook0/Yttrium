@@ -88,7 +88,7 @@ bool LogReg::train(double *input, bool truth)
     
     if (predict == truth) this->win++; else this->fail++;
     
-    cout << "Training Error -- w:" << this->win << " f:" << this->fail << endl;
+    cout << "Training Error -- " << this->win / (this->fail + this->win) << endl;
     
     return (predict == truth);
 }
