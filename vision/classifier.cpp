@@ -90,8 +90,8 @@ bool Classifier::saveState(const char *filename)
 // results on more frames)
 bool Classifier::run(const IplImage *frame, CObjectList *objects, bool scored)
 {
-  //if (!scored)
-  //  return true;
+  if (!scored)
+    return true;
 
   assert((frame != NULL) && (objects != NULL));
   
@@ -107,7 +107,10 @@ bool Classifier::run(const IplImage *frame, CObjectList *objects, bool scored)
   // Do six further resizes, evaluating each time.
   int numLayers = 6;
   TemplateMatcher tm;
-  bool showed = false;
+  
+  int absBestX = INT_MIN, absBestY = INT_MIN;
+  double absBestScore = INT_MIN, absBestScale = scale;
+  
   while(numLayers-- > 0) {
     tm.loadFrame(dst);
     
@@ -133,10 +136,13 @@ bool Classifier::run(const IplImage *frame, CObjectList *objects, bool scored)
     // Compute sum of theta(i) x(i).
     int bestX = INT_MIN, bestY = INT_MIN;
     double bestScore = INT_MIN;
-    for (int x = 0; x < maxWidth - 32; x += 8) {
-        for (int y = 0; y < maxHeight - 32; y += 8) {
+    maxWidth = dst->width;
+    maxHeight = dst->height;
+    for (int x = 0; x < maxWidth; x += 8) {
+        for (int y = 0; y < maxHeight; y += 8) {
         
             double score = 0;
+            bool bad = false;
             for (unsigned featureNum = 0; featureNum < _features.numFeatures(); featureNum++) {
                 FeatureDefinition *fd = _features.getFeature(featureNum);
                 CvRect r = fd->getValidRect();
@@ -145,43 +151,36 @@ bool Classifier::run(const IplImage *frame, CObjectList *objects, bool scored)
                 IplImage *featureMap = images[featureNum];
                 
                 // TODO: max pooling.
+                if (r.x + r.width > featureMap->width || r.y + r.height > featureMap->height) {
+                    bad = true;
+                    break;
+                }
+                
                 double value = this->maxpool(featureMap, r); //cvGetReal2D(featureMap, y + r.y, x + r.x);
                 score += value * _regressor->get(featureNum);
                 
                 //cout << "value: " << value << " featureValue: " << _regressor->get(featureNum) << " score: " << score << endl;
             }
             
-            cout << "x: " << x << " y: " << y << " score: " << score << endl;
-            if (score > bestScore) {
+            //cout << "x: " << x << " y: " << y << " score: " << score << endl;
+            if (!bad && score > bestScore) {
                 bestScore = score;
                 bestX = x;
                 bestY = y;
             }
         }
     }
-    
-    if (numLayers == 1 && !showed) {
-    //cvNamedWindow("blah", CV_WINDOW_AUTOSIZE);
-    //cvShowImage("blah", images[8]);
-    showed = true;
-    }
-    
+
     // Free old images.
     for (unsigned imageNum = 0; imageNum < images.size(); imageNum ++) {
         cvReleaseImage(&images[imageNum]);
     }
     
-    // Logistic regression.
-    double logScore = 1.0 / (1.0 + exp(-1.0 * bestScore));
-    
-    cout << "score: " << bestScore << " logScore: " << logScore << endl;
-    
-    // If logScore > 0.5, we have a match!
-    if (logScore > 0.5) {
-        CObject obj;
-        obj.rect = cvRect(bestX, bestY, 32 * scale, 32 * scale);
-        obj.label = "mug";
-        objects->push_back(obj);
+    if (bestScore > absBestScore) {
+        absBestScore = bestScore;
+        absBestX = bestX;
+        absBestY = bestY;
+        absBestScale = scale;
     }
     
     // Do new resize.
@@ -195,6 +194,19 @@ bool Classifier::run(const IplImage *frame, CObjectList *objects, bool scored)
     cvReleaseImage(&old);
   }
   
+  // Logistic regression.
+    double logScore = 1.0 / (1.0 + exp(-1.0 * absBestScore));
+
+    cout << "score: " << absBestScore << " logScore: " << logScore << endl;
+
+    // If logScore > 0.5, we have a match!
+    if (logScore > 0.5) {
+        CObject obj;
+        obj.rect = cvRect(absBestX * absBestScale, absBestY * absBestScale, 32 * absBestScale, 32 * absBestScale);
+        obj.label = "mug";
+        objects->push_back(obj);
+    }
+  
   cvReleaseImage(&gray);
   return true;
 }
@@ -207,7 +219,7 @@ double Classifier::maxpool(IplImage *r, const CvRect &pool)
     
     for (int x = pool.x; x < pool.x + pool.width; x++)
         for (int y = pool.y; y < pool.y + pool.height; y++)
-            if ( cvGetReal2D(r, y, x) > max || max == 0.0)
+            if ( cvGetReal2D(r, y, x) > max)
                 max = cvGetReal2D(r, y, x);
     
     return max;
