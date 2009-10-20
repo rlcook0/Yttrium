@@ -81,6 +81,23 @@ bool Classifier::saveState(const char *filename)
     return true;
 }
 
+// TESTING ONLY
+bool showRect(const IplImage *image, CObject *rect) {
+    //char *WINDOW_NAME = "test";
+    CvFont font;
+
+    cvNamedWindow("test", CV_WINDOW_AUTOSIZE);
+    cvInitFont(&font, CV_FONT_VECTOR0, 0.75, 0.75, 0.0f, 1, CV_AA);
+    
+    IplImage *frameCopy = cvCloneImage(image);
+    rect->draw(frameCopy, CV_RGB(255, 0, 255), &font);
+    
+    cvShowImage("test", frameCopy);
+    cvReleaseImage(&frameCopy);
+
+    return cvWaitKey(50) != -1;
+}
+
 // run
 // Runs the classifier over the given frame and returns a list of
 // objects found (and their location).
@@ -90,8 +107,8 @@ bool Classifier::saveState(const char *filename)
 // results on more frames)
 bool Classifier::run(const IplImage *frame, CObjectList *objects, bool scored)
 {
-  //if (!scored)
-  //  return true;
+  if (!scored)
+    return true;
 
   assert((frame != NULL) && (objects != NULL));
   
@@ -105,13 +122,14 @@ bool Classifier::run(const IplImage *frame, CObjectList *objects, bool scored)
   cvResize(gray, dst);
   
   // Do six further resizes, evaluating each time.
-  int numLayers = 6;
+  int numLayers = 7;
   TemplateMatcher tm;
   
   int absBestX = INT_MIN, absBestY = INT_MIN;
   double absBestScore = INT_MIN, absBestScale = scale;
   
   while(numLayers-- > 0) {
+    bool skipped = false;
     tm.loadFrame(dst);
    
     // Store feature maps.
@@ -158,12 +176,32 @@ bool Classifier::run(const IplImage *frame, CObjectList *objects, bool scored)
                     break;
                 }
                 
-                double value = this->maxpool(featureMap, r); //cvGetReal2D(featureMap, y + r.y, x + r.x);
+                double value = this->maxpool(featureMap, r); 
                 score += value * _regressor->get(featureNum);
+                
+                /*if (!bad && !skipped) {
+                    CObject obj;
+                    obj.rect = r;
+                    char buffer[50];
+                    sprintf(buffer, "%f", value * _regressor->get(featureNum));
+                    obj.label = buffer;
+                    bool did_skip = showRect(dst, &obj);
+                    if (did_skip) skipped = true;
+                }*/
             }
             
             // Add bias.
             score += _regressor->get(_features.numFeatures());
+            
+            /*if (!bad && !skipped) {
+                CObject obj;
+                obj.rect = cvRect(x * scale, y * scale, 32 * scale, 32 * scale);
+                char buffer[50];
+                sprintf(buffer, "%f", score);
+                obj.label = buffer;
+                bool did_skip = showRect(gray, &obj);
+                if (did_skip) skipped = true;
+            }*/
             
             //cout << "x: " << x << " y: " << y << " score: " << score << endl;
             if (!bad && score > bestScore) {
@@ -216,14 +254,15 @@ bool Classifier::run(const IplImage *frame, CObjectList *objects, bool scored)
 
 double Classifier::maxpool(IplImage *r, const CvRect &pool)
 {
-    double max = -1.0;
+    float max = -1.0;
     
-    // Look mom! i can maxpool with no braces!
-    
-    for (int x = pool.x; x < pool.x + pool.width; x++)
-        for (int y = pool.y; y < pool.y + pool.height; y++)
-            if ( cvGetReal2D(r, y, x) > max)
-                max = cvGetReal2D(r, y, x);
+    for (int x = pool.x; x < pool.x + pool.width; x++) {
+        for (int y = pool.y; y < pool.y + pool.height; y++) {
+            float val = CV_IMAGE_ELEM(r, float, y, x);
+            if ( val > max)
+                max = val;
+        }
+    }
     
     return max;
 }
@@ -244,13 +283,12 @@ double *Classifier::feature_values(IplImage *dst, TemplateMatcher *tm)
         tm->makeResponseImage(fd->getTemplate(), response);
         CvRect valid = fd->getValidRect();
         values[i] = this->maxpool(response, valid);
-        
+
         cvReleaseImage(&response);
         
     }
     return values; // REMEMBER TO FREE!
 }
- 
  
 // train
 // Trains the classifier to recognize the objects given in the
@@ -283,7 +321,7 @@ bool Classifier::train(TTrainingFileList& fileList)
     
  
     cout << "Processing images..." << endl;
-    smallImage = cvCreateImage(cvSize(64, 64), IPL_DEPTH_8U, 1);
+    smallImage = cvCreateImage(cvSize(32, 32), IPL_DEPTH_8U, 1);
     for (int i = 0; i < (int)fileList.files.size(); i++) {
         // show progress
         if (i % 10 == 0) showProgress(i, fileList.files.size());
@@ -299,7 +337,7 @@ bool Classifier::train(TTrainingFileList& fileList)
                 continue;
             }
             
-            // resize to 64 x 64
+            // resize to 32 x 32
             cvResize(image, smallImage);
             
             Trainer t;
@@ -322,7 +360,7 @@ bool Classifier::train(TTrainingFileList& fileList)
     
     cout << "Training to be a pro! (We need a montage) " << endl << "* * * 80s Music begins playing... * * *" << endl;
     
-    for (int e = 0; e < 1000; e++)
+    for (int e = 0; e < 100; e++)
     {
         for (unsigned int i = 0; i < values.size(); i++)
         {
