@@ -24,9 +24,9 @@ public:
     double get(int i);
     
     bool predict(double *input);
-    bool train(double *input, bool truth);
-    bool train(Trainer &t);
-    void learn(); // process batch.
+    void add_to_batch(double *input, bool truth);
+    void add_to_batch(Trainer &t);
+    void gradient_decent(); // process batch.
     
 private:
     
@@ -35,21 +35,22 @@ private:
     double z(double *input);
     
     // computes p(z) = 1 / (1 + exp(-z))
-    double p(double z);
+    double logistic(double z);
     
     // computes g(z) = truth - p(z)
-    double g(double z, bool truth);
+    double objective_function(double *input, bool truth);
     
-    int vars;
+    int num_variables;
+    int num_examples;
     
-    double *t; // Thetas
-    double *b; // Thetas per round.
-    
-    double rate; // learning rate
-
+    double *coeff; // Thetas
+    double *batch; // Thetas per round.
+    double learning_rate; // learning rate
     
     int pushup;
     int fail;
     int win;
+    
+    int tp, tn, fp, fn;
 };
 

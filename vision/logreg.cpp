@@ -11,97 +11,99 @@ using namespace std;
 
 LogReg::LogReg(int variables, double learning_rate)
 {
-    this->vars = variables;
-    this->t = new double[this->vars + 1];
-    this->b = new double[this->vars + 1];
+    this->num_variables = variables;
+    this->coeff = new double[this->num_variables + 1];
+    this->batch = new double[this->num_variables + 1];
     
-    memset(this->t, 0, sizeof(double) * (this->vars + 1));
-    memset(this->b, 0, sizeof(double) * (this->vars + 1));
+    memset(this->coeff, 0, sizeof(double) * (this->num_variables + 1));
+    memset(this->batch, 0, sizeof(double) * (this->num_variables + 1));
     
-    this->rate = learning_rate;
+    this->learning_rate = learning_rate;
     
-    //
-    this->pushup = 0;
+    this->num_examples = 0;
     this->fail = 0;
+    
+    tp = tn = fp = fn = 0;
 }
 
 LogReg::~LogReg()
 {
-    delete[] this->t;
-    delete[] this->b;
+    delete[] this->coeff;
+    delete[] this->batch;
 }
 
 void LogReg::set(int i, double v)
 {
-    this->t[i] = v;
+    this->coeff[i] = v;
 }
 
 double LogReg::get(int i)
 {
-    return this->t[i];
+    return this->coeff[i];
 }
 
 double LogReg::z(double *input)
 {
     double z = 0.0;
-    for (int i = 0; i < this->vars; i++)      // LOOPY!
-        z += this->t[i] * input[i];           // Sum this 0j * xj
+    for (int i = 0; i < this->num_variables; i++)      // LOOPY!
+        z += this->coeff[i] * input[i];           // Sum this 0j * xj
     return z;
 }
 
-double LogReg::p(double z)
+double LogReg::logistic(double z)
 {
     return 1.00 / (1.00 + exp(-z));
 }
 
-double LogReg::g(double z, bool truth)
+double LogReg::objective_function(double *input, bool truth)
 {
-    return (truth ? 1 : 0) - this->p(z);
+    double z = this->z(input);
+    return (truth ? 1 : 0) - this->logistic(z);
 }
 
 
 bool LogReg::predict(double *input)
 {
     double z = this->z(input);
-    return this->p(z) > 0.5;
+    return this->logistic(z) > 0.5;
 }
 
-bool LogReg::train(double *input, bool truth)
+void LogReg::add_to_batch(double *input, bool truth)
 {
-    bool predict = this->predict(input);
-    this->pushup++;
-
-// for each epoch ???    
-// FLAW: only training on one input for this go.... look at lr.c:161-169 //TODO may fail...
-
+    this->num_examples++;
     
-    double z = this->z(input);
-    double g = this->g(z, truth);
+    bool is_class = this->predict(input);
+    double objective_value = this->objective_function(input, truth);
     
-    for (int j = 0; j <= this->vars; j++)
+    for (int j = 0; j <= this->num_variables; j++)
     {
-        double xj = (j < this->vars) ? input[j] : 1; // bias. 
-        this->b[j] += xj * g;
+        double xj = (j < this->num_variables) ? input[j] : 1; // bias. 
+        this->batch[j] += xj * objective_value;
     }
     
-// endfor epoch ???
-    
-    if (predict == truth) this->win++; else this->fail++;
-    
-    printf("Training Error -- %f\n", float(this->win) / float(this->fail + this->win));
-    
-    return (predict == truth);
+    if (is_class && truth) {
+        tp++;
+    } else if (is_class && !truth) {
+        fp++;
+    } else if (!is_class && truth) {
+        fn++;
+    } else if (!is_class && !truth) {
+        tn++;
+    }
 }
 
-bool LogReg::train(Trainer &t)
+void LogReg::add_to_batch(Trainer &t)
 {
-    return this->train(t.values, t.truth);
+    this->add_to_batch(t.values, t.truth);
 }
 
-void LogReg::learn()
+void LogReg::gradient_decent()
 {
-    for (int j = 0; j <= this->vars; j++)
-        this->t[j] += this->rate * this->b[j];
+    for (int j = 0; j <= this->num_variables; j++)
+        this->coeff[j] += this->learning_rate * this->batch[j];
         
-    memset(this->b, 0, sizeof(double) * (this->vars + 1));
+    cout << "tp: " << tp << " fp: " << fp << " fn: " << fn << " tn: " << tn << endl;
+    tp = fp = fn = tn = 0;
+    
+    memset(this->batch, 0, sizeof(double) * (this->num_variables + 1));
 }

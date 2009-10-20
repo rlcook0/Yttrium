@@ -33,7 +33,7 @@ Classifier::Classifier()
     rng = cvRNG(-1);
  
     _features.load("dict.xml");
-    _regressor = new LogReg(_features.numFeatures(), double(0.1));
+    _regressor = new LogReg(_features.numFeatures(), double(0.01));
     
 }
     
@@ -90,8 +90,8 @@ bool Classifier::saveState(const char *filename)
 // results on more frames)
 bool Classifier::run(const IplImage *frame, CObjectList *objects, bool scored)
 {
-  if (!scored)
-    return true;
+  //if (!scored)
+  //  return true;
 
   assert((frame != NULL) && (objects != NULL));
   
@@ -113,7 +113,7 @@ bool Classifier::run(const IplImage *frame, CObjectList *objects, bool scored)
   
   while(numLayers-- > 0) {
     tm.loadFrame(dst);
-    
+   
     // Store feature maps.
     std::vector<IplImage *> images;
     int maxWidth = INT_MAX, maxHeight = INT_MAX;
@@ -136,8 +136,11 @@ bool Classifier::run(const IplImage *frame, CObjectList *objects, bool scored)
     // Compute sum of theta(i) x(i).
     int bestX = INT_MIN, bestY = INT_MIN;
     double bestScore = INT_MIN;
+    
+    // TODO: figure out.
     maxWidth = dst->width;
     maxHeight = dst->height;
+    
     for (int x = 0; x < maxWidth; x += 8) {
         for (int y = 0; y < maxHeight; y += 8) {
         
@@ -150,7 +153,6 @@ bool Classifier::run(const IplImage *frame, CObjectList *objects, bool scored)
                 r.y += y;
                 IplImage *featureMap = images[featureNum];
                 
-                // TODO: max pooling.
                 if (r.x + r.width > featureMap->width || r.y + r.height > featureMap->height) {
                     bad = true;
                     break;
@@ -158,9 +160,10 @@ bool Classifier::run(const IplImage *frame, CObjectList *objects, bool scored)
                 
                 double value = this->maxpool(featureMap, r); //cvGetReal2D(featureMap, y + r.y, x + r.x);
                 score += value * _regressor->get(featureNum);
-                
-                //cout << "value: " << value << " featureValue: " << _regressor->get(featureNum) << " score: " << score << endl;
             }
+            
+            // Add bias.
+            score += _regressor->get(_features.numFeatures());
             
             //cout << "x: " << x << " y: " << y << " score: " << score << endl;
             if (!bad && score > bestScore) {
@@ -319,14 +322,13 @@ bool Classifier::train(TTrainingFileList& fileList)
     
     cout << "Training to be a pro! (We need a montage) " << endl << "* * * 80s Music begins playing... * * *" << endl;
     
-    for (int e = 0; e < 100; e++)
+    for (int e = 0; e < 1000; e++)
     {
         for (unsigned int i = 0; i < values.size(); i++)
         {
-            if (_regressor->train(values[i])) // Train on one set of scores. All features on one training image.
-                cout << "*";
+            _regressor->add_to_batch(values[i]); // Train on one set of scores. All features on one training image.
         }
-        _regressor->learn(); // Process batch (gradient vector)
+        _regressor->gradient_decent(); // Process batch (gradient vector)
     }
     
     cout << endl << endl << "I'm ready. Let's DO THIS!" << endl;
