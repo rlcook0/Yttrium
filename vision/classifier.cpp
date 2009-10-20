@@ -191,16 +191,44 @@ bool Classifier::run(const IplImage *frame, CObjectList *objects, bool scored)
   return true;
 }
 
-/*
-bool Classifier::train(TTrainingFileList& fileList)
+
+
+double Classifier::maxpool(IplImage *r, const CvRect &pool)
 {
-    cout << "Training to be a champ!" << endl;
+    double max = 0.0;
     
-    //TODO JUAN -- add LogReg use here!
+    // Look mom! i can maxpool with no braces!
+    for (int x = pool.x; x < pool.x + pool.width; x++)
+        for (int y = pool.y; x < pool.y + pool.height; y++)
+            if ( cvGetReal2D(r, x, y) > max)
+                max = cvGetReal2D(r, x, y);
     
-    cout << "I'm ready. Let's DO THIS!" << endl;
+    return max;
 }
-*/
+
+double *Classifier::feature_values(IplImage *dst, TemplateMatcher *tm) 
+{
+    tm->loadFrame(dst);
+    FeatureDefinition *fd = NULL;
+    
+    double *values = new double[_features.numFeatures()];
+    for (unsigned i = 0; i < _features.numFeatures(); i++) {
+        
+        fd = _features.getFeature(i);
+        
+        CvSize newSize = cvSize(dst->width - fd->getTemplateWidth() + 1, dst->height - fd->getTemplateHeight() + 1);
+        IplImage *response = cvCreateImage(newSize, IPL_DEPTH_32F, 1);
+        
+        tm->makeResponseImage(fd->getTemplate(), response);
+        CvRect valid = fd->getValidRect();
+        values[i] = this->maxpool(response, valid);
+        
+        delete response;
+        
+    }
+    return values; // REMEMBER TO FREE!
+}
+
 
 // train
 // Trains the classifier to recognize the objects given in the
@@ -212,28 +240,31 @@ bool Classifier::train(TTrainingFileList& fileList)
     // example code to show you number of samples for each object class
     cout << "Classes:" << endl;
     for (int i = 0; i < (int)fileList.classes.size(); i++) {
-	cout << fileList.classes[i] << " (";
-	int count = 0;
-	for (int j = 0; j < (int)fileList.files.size(); j++) {
-	    if (fileList.files[j].label == fileList.classes[i]) {
-		count += 1;
-	    }
-	}
-	cout << count << " samples)" << endl;
+        cout << fileList.classes[i] << " (";
+        int count = 0;
+        for (int j = 0; j < (int)fileList.files.size(); j++) {
+            if (fileList.files[j].label == fileList.classes[i]) {
+        	count += 1;
+            }
+        }
+        cout << count << " samples)" << endl;
     }
     cout << endl;
 
     // example code for loading and resizing image files--
-    // you may find this useful for the milestone    
+    // you may find this useful for the milestone
+
     IplImage *image, *smallImage;
+    
+    std::vector<Trainer> values;
+    TemplateMatcher tm;
+    
 
     cout << "Processing images..." << endl;
     smallImage = cvCreateImage(cvSize(64, 64), IPL_DEPTH_8U, 1);
     for (int i = 0; i < (int)fileList.files.size(); i++) {
         // show progress
-        if (i % 1000 == 0) {
-            showProgress(i, fileList.files.size());
-        }
+        if (i % 1000 == 0) showProgress(i, fileList.files.size());
 
         // skip non-mug and non-other images (milestone only)
         if ((fileList.files[i].label == "mug") ||
@@ -242,16 +273,19 @@ bool Classifier::train(TTrainingFileList& fileList)
             // load the image
             image = cvLoadImage(fileList.files[i].filename.c_str(), 0);
             if (image == NULL) {
-                cerr << "ERROR: could not load image "
-                     << fileList.files[i].filename.c_str() << endl;
+                cerr << "ERROR: could not load image " << fileList.files[i].filename.c_str() << endl;
                 continue;
             }
-
+            
             // resize to 64 x 64
             cvResize(image, smallImage);
-
-            // CS221 TO DO: extract features from image here
-
+            
+            Trainer t;
+            t.values = this->feature_values(smallImage, &tm);
+            t.truth = (fileList.files[i].label == "mug");
+            
+            values.push_back(t);
+            
             // free memory
             cvReleaseImage(&image);
         }
@@ -261,7 +295,22 @@ bool Classifier::train(TTrainingFileList& fileList)
     cvReleaseImage(&smallImage);
     cout << endl;
 
-    // CS221 TO DO: train you classifier here
-
+    
+    // TRAINING!
+    
+    cout << "Training to be a pro! (We need a montage) " << endl << "* * * 80s Music begins playing... * * *" << endl;
+    
+    for (int e = 0; e < 100; e++) 
+    {
+        for (unsigned int i = 0; i < values.size(); i++)
+        {
+            if (_regressor->train(values[i])) // Train on one set of scores. All features on one training image.
+                cout << "*";
+        }
+        _regressor->learn(); // Process batch (gradient vector)
+    }
+    
+    cout << endl << endl << "I'm ready. Let's DO THIS!" << endl;
+    
     return true;
 }
