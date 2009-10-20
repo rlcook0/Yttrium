@@ -34,10 +34,11 @@ Classifier::Classifier()
 
     _features.load("dict.xml");
     mugFeatures = std::vector<double>(_features.numFeatures());
-    mugFeatures[0] = 1;
-    for (int i = 1; i < mugFeatures.size(); i++) {
+    
+    for (unsigned i = 0; i < mugFeatures.size(); i++) {
         mugFeatures[i] = 0;
     }
+    mugFeatures[5] = 100;
 
     // CS221 TO DO: add initialization for any member variables   
 }
@@ -99,68 +100,53 @@ bool Classifier::run(const IplImage *frame, CObjectList *objects, bool scored)
 
   assert((frame != NULL) && (objects != NULL));
   
-  // CS221 TO DO: replace this with your own code
-  
-  // Example code which returns up to 10 random objects, each object
-  // having a width and height equal to half the frame size.
-  /*const char *labels[5] = {
-    "mug", "stapler", "keyboard", "clock", "scissors"
-  }; 
-  int n = cvRandInt(&rng) % 10;
-  while (n-- > 0) {
-    CObject obj;
-    obj.rect = cvRect(0, 0, frame->width / 2, frame->height / 2);
-    obj.rect.x = cvRandInt(&rng) % (frame->width - obj.rect.width);
-    obj.rect.y = cvRandInt(&rng) % (frame->height - obj.rect.height);
-    obj.label = string(labels[cvRandInt(&rng) % 5]);
-    objects->push_back(obj);        
-  }*/
-  
-  // convert to grayscale
+  // Convert to grayscale.
   IplImage *gray = cvCreateImage(cvGetSize(frame), IPL_DEPTH_8U, 1);
   cvCvtColor(frame, gray, CV_BGR2GRAY);
   
-  // resize
-  IplImage *dst = cvCreateImage(cvSize(gray->width / 2.0, gray->height / 2.0), gray->depth, gray->nChannels);
+  // Resize by half first, as per the handout.
+  double scale = 2.0;
+  IplImage *dst = cvCreateImage(cvSize(gray->width / scale, gray->height / scale), gray->depth, gray->nChannels);
   cvResize(gray, dst);
   
+  // Do six further resizes, evaluating each time.
   int numLayers = 6;
-  double currFactor = 2.0;
   TemplateMatcher tm;
   while(numLayers-- > 0) {
-    cout << "size #" << numLayers << endl;
     tm.loadFrame(dst);
     
     // Store feature maps.
     std::vector<IplImage *> images;
+    int maxWidth = INT_MAX, maxHeight = INT_MAX;
     for (unsigned featureNum = 0; featureNum < _features.numFeatures(); featureNum++) {
-        cout << "feature #" << featureNum << endl;       
-        
         FeatureDefinition *fd = _features.getFeature(featureNum);
         CvRect r = fd->getValidRect();
-        
-        //cout << "width: " << fd->getTemplateWidth() << " height: " << fd->getTemplateHeight() << endl;
-        //cout << "rect x: " << r.x << " y: " << r.y << " width: " << r.width << " height: " << r.height << endl;
-        //cout << "dst width: " << dst->width << " height: " << dst->height << endl;
         
         CvSize newSize = cvSize(dst->width - fd->getTemplateWidth() + 1, dst->height - fd->getTemplateHeight() + 1);
         IplImage *featureMap = cvCreateImage(newSize, IPL_DEPTH_32F, 1);
         tm.makeResponseImage(fd->getTemplate(), featureMap);
         images.push_back(featureMap);
+        
+        // Maintain the furthest we can slide the 32x32 window.
+        if (featureMap->width < maxWidth) maxWidth = featureMap->width;
+        if (featureMap->height < maxHeight) maxHeight = featureMap->height;
     }
     
     // Compute sum of theta(i) x(i).
     int bestX, bestY;
     double bestScore = -1;
-    for (int x = 0; x < 50; x += 8) {
-        for (int y = 0; y < 50; y += 8) {
+    for (int x = 0; x < maxWidth - 1; x += 8) {
+        for (int y = 0; y < maxHeight - 1; y += 8) {
+        
             double score = 0;
             for (unsigned featureNum = 0; featureNum < _features.numFeatures(); featureNum++) {
                 FeatureDefinition *fd = _features.getFeature(featureNum);
                 CvRect r = fd->getValidRect();
+                IplImage *featureMap = images[featureNum];
                 
-                double value = cvGetReal2D(x + r.x, y + r.y);
-                score += value * mugFeatures[i];
+                // TODO: max pooling.
+                double value = cvGetReal2D(featureMap, y + r.y, x + r.x);
+                score += value * mugFeatures[featureNum];
             }
             
             if (score > bestScore) {
@@ -171,20 +157,22 @@ bool Classifier::run(const IplImage *frame, CObjectList *objects, bool scored)
         }
     }
     
-    double score = 1.0 / (1.0 + exp(-1.0 * bestScore));
-    if (score > 0.5) {
+    // Logistic regression.
+    double logScore = 1.0 / (1.0 + exp(-1.0 * bestScore));
+    
+    // If logScore > 0.5, we have a match!
+    if (logScore > 0.5) {
         CObject obj;
-        obj.rect = cvRect(bestX, bestY, 10, 10);
-        obj.label = "cup";
+        obj.rect = cvRect(bestX, bestY, 32 * scale, 32 * scale);
+        obj.label = "mug";
         objects->push_back(obj); 
     }
     
     // Do new resize.
-    cout << "Resizing..." << endl;
-    currFactor *= 1.2;
+    scale *= 1.2;
     IplImage *old = dst;
     
-    CvSize newSize = cvSize(gray->width / currFactor, gray->height / currFactor);
+    CvSize newSize = cvSize(gray->width / scale, gray->height / scale);
     dst = cvCreateImage(newSize, gray->depth, gray->nChannels);
     cvResize(gray, dst);
     
