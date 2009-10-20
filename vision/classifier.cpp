@@ -73,7 +73,7 @@ bool Classifier::saveState(const char *filename)
     
     ofstream outfile;
     outfile.open(filename);
-    for (unsigned i = 0; i < mugFeatures.size(); i++) {
+    for (unsigned i = 0; i < _regressor->size(); i++) {
         outfile << _regressor->get(i) << ' ';
     }
     outfile.close();
