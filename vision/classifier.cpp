@@ -79,7 +79,7 @@ bool Classifier::saveState(const char *filename)
     outfile.close();
     
     return true;
-}}
+}
 
 // run
 // Runs the classifier over the given frame and returns a list of
@@ -141,7 +141,7 @@ bool Classifier::run(const IplImage *frame, CObjectList *objects, bool scored)
                 
                 // TODO: max pooling.
                 double value = cvGetReal2D(featureMap, y + r.y, x + r.x);
-                score += value * mugFeatures[featureNum];
+                score += value * _regressor->get(featureNum);
             }
             
             if (score > bestScore) {
@@ -152,7 +152,8 @@ bool Classifier::run(const IplImage *frame, CObjectList *objects, bool scored)
         }
     }
     
-    for (int imageNum = 0; imageNum < images.size(); imageNum ++) {
+    // Free old images.
+    for (unsigned imageNum = 0; imageNum < images.size(); imageNum ++) {
         cvReleaseImage(&images[imageNum]);
     }
     
