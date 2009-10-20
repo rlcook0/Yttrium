@@ -100,7 +100,7 @@ bool LogReg::train(Trainer &t)
 
 void LogReg::learn()
 {
-    for (int j = 0; j < this->vars; j++)
+    for (int j = 0; j <= this->vars; j++)
         this->t[j] += this->rate * this->b[j];
         
     memset(this->b, 0, sizeof(double) * (this->vars + 1));
