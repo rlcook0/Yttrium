@@ -214,7 +214,7 @@ double *Classifier::feature_values(IplImage *dst, TemplateMatcher *tm)
         CvRect valid = fd->getValidRect();
         values[i] = this->maxpool(response, valid);
         
-        delete response;
+        cvReleaseImage(&response);
         
     }
     return values; // REMEMBER TO FREE!
