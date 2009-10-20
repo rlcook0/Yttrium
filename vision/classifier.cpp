@@ -72,8 +72,8 @@ bool Classifier::saveState(const char *filename)
     assert(filename != NULL);
     
     ofstream outfile;
-    outfile.open(filename);
-    for (unsigned i = 0; i < _regressor->size(); i++) {
+    outfile.open(filename); //<= because of bias.
+    for (unsigned i = 0; i <= _features.numFeatures(); i++) {
         outfile << _regressor->get(i) << ' ';
     }
     outfile.close();
