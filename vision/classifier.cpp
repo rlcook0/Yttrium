@@ -207,7 +207,7 @@ double Classifier::maxpool(IplImage *r, const CvRect &pool)
     
     for (int x = pool.x; x < pool.x + pool.width; x++)
         for (int y = pool.y; y < pool.y + pool.height; y++)
-            if ( cvGetReal2D(r, y, x) > max)
+            if ( cvGetReal2D(r, y, x) > max || max == 0.0)
                 max = cvGetReal2D(r, y, x);
     
     return max;
