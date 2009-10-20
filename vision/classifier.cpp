@@ -157,7 +157,7 @@ bool Classifier::run(const IplImage *frame, CObjectList *objects, bool scored)
         }
     }
     
-    for (int imageNum = 0; i < images.size(); i++) {
+    for (int imageNum = 0; imageNum < images.size(); imageNum ++) {
         cvReleaseImage(&images[imageNum]);
     }
     
