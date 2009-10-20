@@ -90,8 +90,8 @@ bool Classifier::saveState(const char *filename)
 // results on more frames)
 bool Classifier::run(const IplImage *frame, CObjectList *objects, bool scored)
 {
-  if (!scored)
-    return true;
+  //if (!scored)
+  //  return true;
 
   assert((frame != NULL) && (objects != NULL));
   
@@ -107,6 +107,7 @@ bool Classifier::run(const IplImage *frame, CObjectList *objects, bool scored)
   // Do six further resizes, evaluating each time.
   int numLayers = 6;
   TemplateMatcher tm;
+  bool showed = false;
   while(numLayers-- > 0) {
     tm.loadFrame(dst);
     
@@ -122,14 +123,16 @@ bool Classifier::run(const IplImage *frame, CObjectList *objects, bool scored)
         tm.makeResponseImage(fd->getTemplate(), featureMap);
         images.push_back(featureMap);
         
+        //cout << featureMap->width << " ";
+        
         // Maintain the furthest we can slide the 32x32 window.
         if (featureMap->width < maxWidth) maxWidth = featureMap->width;
         if (featureMap->height < maxHeight) maxHeight = featureMap->height;
     }
     
     // Compute sum of theta(i) x(i).
-    int bestX, bestY;
-    double bestScore = -1;
+    int bestX = INT_MIN, bestY = INT_MIN;
+    double bestScore = INT_MIN;
     for (int x = 0; x < maxWidth - 32; x += 8) {
         for (int y = 0; y < maxHeight - 32; y += 8) {
         
@@ -137,19 +140,30 @@ bool Classifier::run(const IplImage *frame, CObjectList *objects, bool scored)
             for (unsigned featureNum = 0; featureNum < _features.numFeatures(); featureNum++) {
                 FeatureDefinition *fd = _features.getFeature(featureNum);
                 CvRect r = fd->getValidRect();
+                r.x += x;
+                r.y += y;
                 IplImage *featureMap = images[featureNum];
                 
                 // TODO: max pooling.
-                double value = cvGetReal2D(featureMap, y + r.y, x + r.x);
+                double value = this->maxpool(featureMap, r); //cvGetReal2D(featureMap, y + r.y, x + r.x);
                 score += value * _regressor->get(featureNum);
+                
+                //cout << "value: " << value << " featureValue: " << _regressor->get(featureNum) << " score: " << score << endl;
             }
             
+            cout << "x: " << x << " y: " << y << " score: " << score << endl;
             if (score > bestScore) {
                 bestScore = score;
                 bestX = x;
                 bestY = y;
             }
         }
+    }
+    
+    if (numLayers == 1 && !showed) {
+    //cvNamedWindow("blah", CV_WINDOW_AUTOSIZE);
+    //cvShowImage("blah", images[8]);
+    showed = true;
     }
     
     // Free old images.
@@ -159,6 +173,8 @@ bool Classifier::run(const IplImage *frame, CObjectList *objects, bool scored)
     
     // Logistic regression.
     double logScore = 1.0 / (1.0 + exp(-1.0 * bestScore));
+    
+    cout << "score: " << bestScore << " logScore: " << logScore << endl;
     
     // If logScore > 0.5, we have a match!
     if (logScore > 0.5) {
@@ -185,7 +201,7 @@ bool Classifier::run(const IplImage *frame, CObjectList *objects, bool scored)
 
 double Classifier::maxpool(IplImage *r, const CvRect &pool)
 {
-    double max = 0.0;
+    double max = -1.0;
     
     // Look mom! i can maxpool with no braces!
     
