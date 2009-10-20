@@ -86,8 +86,11 @@ bool LogReg::train(double *input, bool truth)
     
 // endfor epoch ???
     
-    if (predict == truth) { this->win++; return true; }
-    this->fail++; return false;
+    if (predict == truth) this->win++; else this->fail++;
+    
+    printf("Training Error -- %f\n", float(this->win) / float(this->fail + this->win));
+    
+    return (predict == truth);
 }
 
 bool LogReg::train(Trainer &t)
