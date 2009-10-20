@@ -188,10 +188,11 @@ double Classifier::maxpool(IplImage *r, const CvRect &pool)
     double max = 0.0;
     
     // Look mom! i can maxpool with no braces!
+    
     for (int x = pool.x; x < pool.x + pool.width; x++)
-        for (int y = pool.y; x < pool.y + pool.height; y++)
-            if ( cvGetReal2D(r, x, y) > max)
-                max = cvGetReal2D(r, x, y);
+        for (int y = pool.y; y < pool.y + pool.height; y++)
+            if ( cvGetReal2D(r, y, x) > max)
+                max = cvGetReal2D(r, y, x);
     
     return max;
 }
