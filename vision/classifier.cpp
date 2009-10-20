@@ -2,36 +2,36 @@
 ** CS221 Computer Vision Project
 ** Copyright (c) 2006, Stanford University
 **
-** FILENAME:    classifier.cpp
-** AUTHOR(S):   Stephen Gould <sgould@stanford.edu>
-**              Ian Goodfellow <ia3n@stanford.edu>
+** FILENAME: classifier.cpp
+** AUTHOR(S): Stephen Gould <sgould@stanford.edu>
+** Ian Goodfellow <ia3n@stanford.edu>
 ** DESCRIPTION:
-**  See classifier.h
+** See classifier.h
 **
 *****************************************************************************/
-
+ 
 #include <cassert>
 #include <iostream>
 #include <fstream>
 #include <algorithm>
-
+ 
 #include "cv.h"
 #include "cxcore.h"
 #include "highgui.h"
-
+ 
 #include "classifier.h"
 #include "logreg.h"
-
+ 
 using namespace std;
-
+ 
 // Classifier class ---------------------------------------------------------
-
+ 
 // default constructor
 Classifier::Classifier()
 {
     // initalize the random number generator (for sample code)
     rng = cvRNG(-1);
-
+ 
     _features.load("dict.xml");
     _regressor = new LogReg(_features.numFeatures(), double(0.1));
     
@@ -40,10 +40,10 @@ Classifier::Classifier()
 // destructor
 Classifier::~Classifier()
 {
-
+ 
     // CS221 TO DO: free any memory allocated by the object
 }
-
+ 
 // loadState
 // Configure the classifier from the given file.
 bool Classifier::loadState(const char *filename)
@@ -64,7 +64,7 @@ bool Classifier::loadState(const char *filename)
     
     return true;
 }
-
+ 
 // saveState
 // Writes classifier configuration to the given file
 bool Classifier::saveState(const char *filename)
@@ -79,7 +79,7 @@ bool Classifier::saveState(const char *filename)
     outfile.close();
     
     return true;
-}
+}}
 
 // run
 // Runs the classifier over the given frame and returns a list of
@@ -95,69 +95,53 @@ bool Classifier::run(const IplImage *frame, CObjectList *objects, bool scored)
 
   assert((frame != NULL) && (objects != NULL));
   
-  // CS221 TO DO: replace this with your own code
-  
-  // Example code which returns up to 10 random objects, each object
-  // having a width and height equal to half the frame size.
-  /*const char *labels[5] = {
-    "mug", "stapler", "keyboard", "clock", "scissors"
-  }; 
-  int n = cvRandInt(&rng) % 10;
-  while (n-- > 0) {
-    CObject obj;
-    obj.rect = cvRect(0, 0, frame->width / 2, frame->height / 2);
-    obj.rect.x = cvRandInt(&rng) % (frame->width - obj.rect.width);
-    obj.rect.y = cvRandInt(&rng) % (frame->height - obj.rect.height);
-    obj.label = string(labels[cvRandInt(&rng) % 5]);
-    objects->push_back(obj);        
-  }*/
-  
-  // convert to grayscale
-  /*
+  // Convert to grayscale.
   IplImage *gray = cvCreateImage(cvGetSize(frame), IPL_DEPTH_8U, 1);
   cvCvtColor(frame, gray, CV_BGR2GRAY);
   
-  // resize
-  IplImage *dst = cvCreateImage(cvSize(gray->width / 2.0, gray->height / 2.0), gray->depth, gray->nChannels);
+  // Resize by half first, as per the handout.
+  double scale = 2.0;
+  IplImage *dst = cvCreateImage(cvSize(gray->width / scale, gray->height / scale), gray->depth, gray->nChannels);
   cvResize(gray, dst);
   
+  // Do six further resizes, evaluating each time.
   int numLayers = 6;
-  double currFactor = 2.0;
   TemplateMatcher tm;
   while(numLayers-- > 0) {
-    cout << "size #" << numLayers << endl;
     tm.loadFrame(dst);
     
     // Store feature maps.
     std::vector<IplImage *> images;
+    int maxWidth = INT_MAX, maxHeight = INT_MAX;
     for (unsigned featureNum = 0; featureNum < _features.numFeatures(); featureNum++) {
-        cout << "feature #" << featureNum << endl;       
-        
         FeatureDefinition *fd = _features.getFeature(featureNum);
         CvRect r = fd->getValidRect();
-        
-        //cout << "width: " << fd->getTemplateWidth() << " height: " << fd->getTemplateHeight() << endl;
-        //cout << "rect x: " << r.x << " y: " << r.y << " width: " << r.width << " height: " << r.height << endl;
-        //cout << "dst width: " << dst->width << " height: " << dst->height << endl;
         
         CvSize newSize = cvSize(dst->width - fd->getTemplateWidth() + 1, dst->height - fd->getTemplateHeight() + 1);
         IplImage *featureMap = cvCreateImage(newSize, IPL_DEPTH_32F, 1);
         tm.makeResponseImage(fd->getTemplate(), featureMap);
         images.push_back(featureMap);
+        
+        // Maintain the furthest we can slide the 32x32 window.
+        if (featureMap->width < maxWidth) maxWidth = featureMap->width;
+        if (featureMap->height < maxHeight) maxHeight = featureMap->height;
     }
     
     // Compute sum of theta(i) x(i).
     int bestX, bestY;
     double bestScore = -1;
-    for (int x = 0; x < 50; x += 8) {
-        for (int y = 0; y < 50; y += 8) {
+    for (int x = 0; x < maxWidth - 32; x += 8) {
+        for (int y = 0; y < maxHeight - 32; y += 8) {
+        
             double score = 0;
             for (unsigned featureNum = 0; featureNum < _features.numFeatures(); featureNum++) {
                 FeatureDefinition *fd = _features.getFeature(featureNum);
                 CvRect r = fd->getValidRect();
+                IplImage *featureMap = images[featureNum];
                 
-                double value = cvGetReal2D(x + r.x, y + r.y);
-                score += value * mugFeatures[i];
+                // TODO: max pooling.
+                double value = cvGetReal2D(featureMap, y + r.y, x + r.x);
+                score += value * mugFeatures[featureNum];
             }
             
             if (score > bestScore) {
@@ -168,73 +152,109 @@ bool Classifier::run(const IplImage *frame, CObjectList *objects, bool scored)
         }
     }
     
-    double score = 1.0 / (1.0 + exp(-1.0 * bestScore));
-    if (score > 0.5) {
+    for (int imageNum = 0; imageNum < images.size(); imageNum ++) {
+        cvReleaseImage(&images[imageNum]);
+    }
+    
+    // Logistic regression.
+    double logScore = 1.0 / (1.0 + exp(-1.0 * bestScore));
+    
+    // If logScore > 0.5, we have a match!
+    if (logScore > 0.5) {
         CObject obj;
-        obj.rect = cvRect(bestX, bestY, 10, 10);
-        obj.label = "cup";
-        objects->push_back(obj); 
+        obj.rect = cvRect(bestX, bestY, 32 * scale, 32 * scale);
+        obj.label = "mug";
+        objects->push_back(obj);
     }
     
     // Do new resize.
-    cout << "Resizing..." << endl;
-    currFactor *= 1.2;
+    scale *= 1.2;
     IplImage *old = dst;
     
-    CvSize newSize = cvSize(gray->width / currFactor, gray->height / currFactor);
+    CvSize newSize = cvSize(gray->width / scale, gray->height / scale);
     dst = cvCreateImage(newSize, gray->depth, gray->nChannels);
     cvResize(gray, dst);
     
     cvReleaseImage(&old);
   }
-  */
+  
+  cvReleaseImage(&gray);
   return true;
 }
 
-/*
-bool Classifier::train(TTrainingFileList& fileList)
+double Classifier::maxpool(IplImage *r, const CvRect &pool)
 {
-    cout << "Training to be a champ!" << endl;
+    double max = 0.0;
     
-    //TODO JUAN -- add LogReg use here!
+    // Look mom! i can maxpool with no braces!
+    for (int x = pool.x; x < pool.x + pool.width; x++)
+        for (int y = pool.y; x < pool.y + pool.height; y++)
+            if ( cvGetReal2D(r, x, y) > max)
+                max = cvGetReal2D(r, x, y);
     
-    cout << "I'm ready. Let's DO THIS!" << endl;
+    return max;
 }
-*/
-
+ 
+double *Classifier::feature_values(IplImage *dst, TemplateMatcher *tm)
+{
+    tm->loadFrame(dst);
+    FeatureDefinition *fd = NULL;
+    
+    double *values = new double[_features.numFeatures()];
+    for (unsigned i = 0; i < _features.numFeatures(); i++) {
+        
+        fd = _features.getFeature(i);
+        
+        CvSize newSize = cvSize(dst->width - fd->getTemplateWidth() + 1, dst->height - fd->getTemplateHeight() + 1);
+        IplImage *response = cvCreateImage(newSize, IPL_DEPTH_32F, 1);
+        
+        tm->makeResponseImage(fd->getTemplate(), response);
+        CvRect valid = fd->getValidRect();
+        values[i] = this->maxpool(response, valid);
+        
+        delete response;
+        
+    }
+    return values; // REMEMBER TO FREE!
+}
+ 
+ 
 // train
 // Trains the classifier to recognize the objects given in the
 // training file list.
 bool Classifier::train(TTrainingFileList& fileList)
 {
     // CS221 TO DO: replace with your own training code
-
+ 
     // example code to show you number of samples for each object class
     cout << "Classes:" << endl;
     for (int i = 0; i < (int)fileList.classes.size(); i++) {
-	cout << fileList.classes[i] << " (";
-	int count = 0;
-	for (int j = 0; j < (int)fileList.files.size(); j++) {
-	    if (fileList.files[j].label == fileList.classes[i]) {
-		count += 1;
-	    }
-	}
-	cout << count << " samples)" << endl;
+        cout << fileList.classes[i] << " (";
+        int count = 0;
+        for (int j = 0; j < (int)fileList.files.size(); j++) {
+            if (fileList.files[j].label == fileList.classes[i]) {
+         count += 1;
+            }
+        }
+        cout << count << " samples)" << endl;
     }
     cout << endl;
-
+ 
     // example code for loading and resizing image files--
-    // you may find this useful for the milestone    
+    // you may find this useful for the milestone
+ 
     IplImage *image, *smallImage;
-
+    
+    std::vector<Trainer> values;
+    TemplateMatcher tm;
+    
+ 
     cout << "Processing images..." << endl;
     smallImage = cvCreateImage(cvSize(64, 64), IPL_DEPTH_8U, 1);
     for (int i = 0; i < (int)fileList.files.size(); i++) {
         // show progress
-        if (i % 1000 == 0) {
-            showProgress(i, fileList.files.size());
-        }
-
+        if (i % 1000 == 0) showProgress(i, fileList.files.size());
+ 
         // skip non-mug and non-other images (milestone only)
         if ((fileList.files[i].label == "mug") ||
             (fileList.files[i].label == "other")) {
@@ -242,26 +262,44 @@ bool Classifier::train(TTrainingFileList& fileList)
             // load the image
             image = cvLoadImage(fileList.files[i].filename.c_str(), 0);
             if (image == NULL) {
-                cerr << "ERROR: could not load image "
-                     << fileList.files[i].filename.c_str() << endl;
+                cerr << "ERROR: could not load image " << fileList.files[i].filename.c_str() << endl;
                 continue;
             }
-
+            
             // resize to 64 x 64
             cvResize(image, smallImage);
-
-            // CS221 TO DO: extract features from image here
-
+            
+            Trainer t;
+            t.values = this->feature_values(smallImage, &tm);
+            t.truth = (fileList.files[i].label == "mug");
+            
+            values.push_back(t);
+            
             // free memory
             cvReleaseImage(&image);
         }
     }
-
+ 
     // free memory
     cvReleaseImage(&smallImage);
     cout << endl;
-
-    // CS221 TO DO: train you classifier here
-
+ 
+    
+    // TRAINING!
+    
+    cout << "Training to be a pro! (We need a montage) " << endl << "* * * 80s Music begins playing... * * *" << endl;
+    
+    for (int e = 0; e < 100; e++)
+    {
+        for (unsigned int i = 0; i < values.size(); i++)
+        {
+            if (_regressor->train(values[i])) // Train on one set of scores. All features on one training image.
+                cout << "*";
+        }
+        _regressor->learn(); // Process batch (gradient vector)
+    }
+    
+    cout << endl << endl << "I'm ready. Let's DO THIS!" << endl;
+    
     return true;
 }
