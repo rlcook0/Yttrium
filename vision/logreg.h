@@ -1,11 +1,17 @@
 #pragma once
 
 
+class Trainer {
+public:
+    double *values;
+    bool truth;
+};
+
 class LogReg {
     
 public:
     
-    LogReg(int variables, int learning_rate);
+    LogReg(int variables, double learning_rate);
     ~LogReg();
     
     // For loading from file.
@@ -16,6 +22,8 @@ public:
     
     bool predict(double *input);
     bool train(double *input, bool truth);
+    bool train(Trainer &t);
+    void learn(); // process batch.
     
 private:
     
@@ -38,7 +46,7 @@ private:
 
     
     int pushup;
-    int fails;
-    int wins;
+    int fail;
+    int win;
 };
 

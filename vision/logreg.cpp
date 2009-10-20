@@ -3,11 +3,13 @@
 #include <iostream>
 #include <fstream>
 #include <algorithm>
-#include <stdlib>
+#include <cmath>
 
 #include "logreg.h"
 
-LogReg::LogReg(int variables, int learning_rate)
+using namespace std;
+
+LogReg::LogReg(int variables, double learning_rate)
 {
     this->vars = variables;
     this->t = new double[this->vars + 1];
@@ -19,7 +21,7 @@ LogReg::LogReg(int variables, int learning_rate)
     this->rate = learning_rate;
     
     //
-    this->pushups = 0;
+    this->pushup = 0;
     this->fail = 0;
 }
 
@@ -49,7 +51,7 @@ double LogReg::z(double *input)
 
 double LogReg::p(double z)
 {
-    return 1.00 / (1.00 + exp(-z))
+    return 1.00 / (1.00 + exp(-z));
 }
 
 double LogReg::g(double z, bool truth)
@@ -72,7 +74,6 @@ bool LogReg::train(double *input, bool truth)
 // for each epoch ???    
 // FLAW: only training on one input for this go.... look at lr.c:161-169 //TODO may fail...
 
-    memset(this->b, 0, sizeof(double) * (this->vars + 1));
     
     double z = this->z(input);
     double g = this->g(z, truth);
@@ -83,11 +84,21 @@ bool LogReg::train(double *input, bool truth)
         this->b[j] += xj * g;
     }
     
-    for (int j = 0; j < this->vars; j++)
-        this->t[j] += this->rate * this->b[j];
-    
 // endfor epoch ???
     
     if (predict == truth) { this->win++; return true; }
     this->fail++; return false;
+}
+
+bool LogReg::train(Trainer &t)
+{
+    return this->train(t.values, t.truth);
+}
+
+void LogReg::learn()
+{
+    for (int j = 0; j < this->vars; j++)
+        this->t[j] += this->rate * this->b[j];
+        
+    memset(this->b, 0, sizeof(double) * (this->vars + 1));
 }

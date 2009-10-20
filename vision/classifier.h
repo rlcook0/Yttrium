@@ -28,6 +28,10 @@
 #include "objects.h"
 #include "featureDictionary.h"
 
+
+#include "logreg.h"
+#include "template.h"
+
 /* Classifier class ---------------------------------------------------------
  */
 class Classifier {
@@ -57,9 +61,11 @@ public:
 private:
 
     FeatureDictionary _features;
-
-
+    LogReg *_regressor;
 
     // CS221 TO DO: ADD YOUR MEMBER FUNCTIONS HERE
+    
+    double maxpool(IplImage *r, const CvRect &pool);
+    double *feature_values(IplImage *dst, TemplateMatcher *tm);
 };
 
