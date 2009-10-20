@@ -255,7 +255,7 @@ bool Classifier::train(TTrainingFileList& fileList)
     smallImage = cvCreateImage(cvSize(64, 64), IPL_DEPTH_8U, 1);
     for (int i = 0; i < (int)fileList.files.size(); i++) {
         // show progress
-        if (i % 1000 == 0) showProgress(i, fileList.files.size());
+        if (i % 10 == 0) showProgress(i, fileList.files.size());
  
         // skip non-mug and non-other images (milestone only)
         if ((fileList.files[i].label == "mug") ||
