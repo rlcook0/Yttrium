@@ -59,7 +59,7 @@ bool Classifier::loadState(const char *filename)
         infile >> val;
         if (infile.fail() || infile.eof()) return true;
         
-        _regressor->set(val, i++);
+        _regressor->set(i++, val);
     }
     
     return true;
