@@ -103,7 +103,7 @@ bool Classifier::loadTrainingFile(const char *filename, std::vector<Trainer> *tr
         {
             infile >> t.values[j];
         }
-        values->push_back(t);
+        trainers->push_back(t);
     }
     
     return true;
@@ -122,10 +122,10 @@ bool Classifier::saveTrainingFile(const char *filename, std::vector<Trainer> *tr
     
     for (unsigned i = 0; i < trainers->size(); i++) 
     {
-        outfile << (*trainers)[i]->truth << ' ';
+        outfile << (*trainers)[i].truth << ' ';
         for (unsigned j = 0; j <= _features.numFeatures(); j++) 
         {
-            outfile << (*trainers)[i]->values[j] << ' ';
+            outfile << (*trainers)[i].values[j] << ' ';
         }
         outfile << endl;
     }
@@ -378,7 +378,7 @@ bool Classifier::train(TTrainingFileList& fileList, const char *trainingFile)
     cout << "Processing images..." << endl;
     smallImage = cvCreateImage(cvSize(32, 32), IPL_DEPTH_8U, 1);
     
-    bool extractVector = this->loadTrainingFile(&vector, trainingFile);
+    bool extractVector = this->loadTrainingFile(trainingFile, &values);
     
     if (extractVector) {
         for (int i = 0; i < (int)fileList.files.size(); i++) {
@@ -421,7 +421,7 @@ bool Classifier::train(TTrainingFileList& fileList, const char *trainingFile)
         cvReleaseImage(&smallImage);
         cout << endl;
 
-        this->saveTrainingVector(&values);
+        this->saveTrainingFile(trainingFile, &values);
     }
     
     // TRAINING!

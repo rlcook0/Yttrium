@@ -57,6 +57,7 @@ void usage() {
 int main(int argc, char *argv[])
 {
     char *configurationFile;
+    char *trainingFile;
     bool bVerbose;
     char **args;
     
