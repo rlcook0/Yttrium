@@ -49,6 +49,7 @@ void usage() {
     cerr << "./train [<options>] <directory>" << endl << endl;
     cerr << "OPTIONS:" << endl;
     cerr << "    -c <filename>  :: configuration file for saving state" << endl;
+    cerr << "    -t <filename>  :: training file for saving feature values" << endl;
     cerr << "    -h             :: show this message" << endl;
     cerr << "    -v             :: verbose" << endl;
     cerr << endl;
