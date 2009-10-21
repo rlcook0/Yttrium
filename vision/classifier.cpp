@@ -39,7 +39,7 @@ Classifier::Classifier()
 // destructor
 Classifier::~Classifier()
 {
- 
+    delete _regressor;
     // CS221 TO DO: free any memory allocated by the object
 }
  
@@ -447,6 +447,13 @@ bool Classifier::train(TTrainingFileList& fileList, const char *trainingFile)
             _regressor->add_to_batch(values[i]); // Train on one set of scores. All features on one training image.
         }
         diff = fabs(_regressor->gradient_decent()); // Process batch (gradient vector)
+    }
+    
+    cout << endl << endl << "All read up. Now, burn the books!" << endl;
+    
+    for (unsigned int i = 0; i < values.size(); i++)
+    {
+        delete[] values[i].values;
     }
     
     cout << endl << endl << "I'm ready. Let's DO THIS!" << endl;
