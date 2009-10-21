@@ -47,6 +47,7 @@ double LogReg::z(double *input)
     double z = 0.0;
     for (int i = 0; i < this->num_variables; i++)      // LOOPY!
         z += this->coeff[i] * input[i];           // Sum this 0j * xj
+    z += this->coeff[this->num_variables];
     return z;
 }
 
@@ -75,11 +76,12 @@ void LogReg::add_to_batch(double *input, bool truth)
     bool is_class = this->predict(input);
     double objective_value = this->objective_function(input, truth);
     
-    for (int j = 0; j <= this->num_variables; j++)
+    for (int j = 0; j < this->num_variables; j++)
     {
-        double xj = (j < this->num_variables) ? input[j] : 1; // bias. 
-        this->batch[j] += xj * objective_value;
+        this->batch[j] += input[j] * objective_value;
     }
+    
+    this->batch[this->num_variables] += objective_value;
     
     if (is_class && truth) {
         tp++;
@@ -102,9 +104,16 @@ double LogReg::gradient_decent()
     double total = 0;
     for (int j = 0; j <= this->num_variables; j++) {
         double diff = this->learning_rate * this->batch[j];
-        total += diff;
+        
+        //if (j < this->num_variables)
+            total += diff;
+        
         this->coeff[j] += diff;
+        
+        //cout << this->coeff[j] << " ";
     }
+    //cout << endl;
+    
     cout << "tp: " << tp << " fp: " << fp << " fn: " << fn << " tn: " << tn << " totaldiff: " << total << endl;
     tp = fp = fn = tn = 0;
     
