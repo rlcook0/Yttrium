@@ -22,7 +22,6 @@
 #include "classifier.h"
 #include "logreg.h"
  
-using namespace std;
  
 // Classifier class ---------------------------------------------------------
  
@@ -75,6 +74,60 @@ bool Classifier::saveState(const char *filename)
     outfile.open(filename); //<= because of bias.
     for (unsigned i = 0; i <= _features.numFeatures(); i++) {
         outfile << _regressor->get(i) << ' ';
+    }
+    outfile.close();
+    
+    return true;
+}
+
+bool Classifier::loadTrainingFile(const char *filename, std::vector<Trainer> *trainers)
+{
+    if (filename == NULL) return false;
+    
+    ifstream infile;
+    infile.open(filename);
+    
+    int vars, count;
+    
+    infile >> count;
+    if (infile.fail() || infile.eof()) return false;
+    
+    infile >> vars;
+    if (infile.fail() || infile.eof()) return false;
+    
+    for (int i = 0; i < count; i++) 
+    {
+        Trainer t;
+        infile >> t.truth;
+        for (int j = 0; j <= vars; j ++) 
+        {
+            infile >> t.values[j];
+        }
+        values->push_back(t);
+    }
+    
+    return true;
+}
+ 
+// saveState
+// Writes classifier TrainingFile to the given file
+bool Classifier::saveTrainingFile(const char *filename, std::vector<Trainer> *trainers)
+{
+    if (filename == NULL) return false;
+    
+    ofstream outfile;
+    outfile.open(filename); //<= because of bias.
+    
+    outfile << trainers->size() << ' ' << _features.numFeatures() << endl;
+    
+    for (unsigned i = 0; i < trainers->size(); i++) 
+    {
+        outfile << (*trainers)[i]->truth << ' ';
+        for (unsigned j = 0; j <= _features.numFeatures(); j++) 
+        {
+            outfile << (*trainers)[i]->values[j] << ' ';
+        }
+        outfile << endl;
     }
     outfile.close();
     
@@ -293,7 +346,7 @@ double *Classifier::feature_values(IplImage *dst, TemplateMatcher *tm)
 // train
 // Trains the classifier to recognize the objects given in the
 // training file list.
-bool Classifier::train(TTrainingFileList& fileList)
+bool Classifier::train(TTrainingFileList& fileList, const char *trainingFile)
 {
     // CS221 TO DO: replace with your own training code
  
@@ -324,46 +377,52 @@ bool Classifier::train(TTrainingFileList& fileList)
  
     cout << "Processing images..." << endl;
     smallImage = cvCreateImage(cvSize(32, 32), IPL_DEPTH_8U, 1);
-    for (int i = 0; i < (int)fileList.files.size(); i++) {
-        // show progress
-        if (i % 10 == 0) showProgress(i, fileList.files.size());
+    
+    bool extractVector = this->loadTrainingFile(&vector, trainingFile);
+    
+    if (extractVector) {
+        for (int i = 0; i < (int)fileList.files.size(); i++) {
+            // show progress
+            if (i % 10 == 0) showProgress(i, fileList.files.size());
  
-        // skip non-mug and non-other images (milestone only)
-        if ((fileList.files[i].label == "mug") ||
-            (fileList.files[i].label == "other")) {
+            // skip non-mug and non-other images (milestone only)
+            if ((fileList.files[i].label == "mug") ||
+                (fileList.files[i].label == "other")) {
             
-            // Only use so many of each...
-            if (fileList.files[i].label == "mug") {
-                if (maxMugs-- < 0) continue;
-            } else if (fileList.files[i].label == "other") {
-                if (maxOther-- < 0) continue;
+                // Only use so many of each...
+                if (fileList.files[i].label == "mug") {
+                    if (maxMugs-- < 0) continue;
+                } else if (fileList.files[i].label == "other") {
+                    if (maxOther-- < 0) continue;
+                }
+            
+                // load the image
+                image = cvLoadImage(fileList.files[i].filename.c_str(), 0);
+                if (image == NULL) {
+                    cerr << "ERROR: could not load image " << fileList.files[i].filename.c_str() << endl;
+                    continue;
+                }
+            
+                // resize to 32 x 32
+                cvResize(image, smallImage);
+            
+                Trainer t;
+                t.values = this->feature_values(smallImage, &tm);
+                t.truth = (fileList.files[i].label == "mug");
+            
+                values.push_back(t);
+            
+                // free memory
+                cvReleaseImage(&image);
             }
-            
-            // load the image
-            image = cvLoadImage(fileList.files[i].filename.c_str(), 0);
-            if (image == NULL) {
-                cerr << "ERROR: could not load image " << fileList.files[i].filename.c_str() << endl;
-                continue;
-            }
-            
-            // resize to 32 x 32
-            cvResize(image, smallImage);
-            
-            Trainer t;
-            t.values = this->feature_values(smallImage, &tm);
-            t.truth = (fileList.files[i].label == "mug");
-            
-            values.push_back(t);
-            
-            // free memory
-            cvReleaseImage(&image);
         }
+        
+        // free memory
+        cvReleaseImage(&smallImage);
+        cout << endl;
+
+        this->saveTrainingVector(&values);
     }
- 
-    // free memory
-    cvReleaseImage(&smallImage);
-    cout << endl;
- 
     
     // TRAINING!
     

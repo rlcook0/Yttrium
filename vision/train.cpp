@@ -65,6 +65,7 @@ int main(int argc, char *argv[])
     // set defaults
     configurationFile = NULL;   // set using -c <filename>
     bVerbose = false;           // turn on with -v
+    trainingFile = NULL;
 
     // check arguments
     args = argv + 1;
@@ -76,10 +77,13 @@ int main(int argc, char *argv[])
                 return -1;
             }
             configurationFile = *args;
+        } else if (!strcmp(*args, "-t")) {
+            argc--; args++;
+            trainingFile = *args;
         } else if (!strcmp(*args, "-h")) {
-	    usage();
-	    return 0;
-	} else if (!strcmp(*args, "-v")) {
+            usage();
+            return 0;
+        } else if (!strcmp(*args, "-v")) {
             bVerbose = !bVerbose;
         } else {
             cerr << "ERROR: unrecognized option " << *args << endl;
@@ -96,11 +100,12 @@ int main(int argc, char *argv[])
     // load the training file list
     TTrainingFileList fileList;
     fileList = getTrainingFiles(*args, ".jpg");
+    
 
     // now train the classifier
-    if (!classifier.train(fileList)) {
-	cerr << "ERROR: could not train classifier" << endl;
-	exit(-1);
+    if (!classifier.train(fileList, trainingFile)) {
+        cerr << "ERROR: could not train classifier" << endl;
+        exit(-1);
     }
 
     // save classifier configuration

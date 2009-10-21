@@ -34,6 +34,9 @@
 
 /* Classifier class ---------------------------------------------------------
  */
+ 
+using namespace std;
+ 
 class Classifier {
 protected:
     CvRNG rng;
@@ -52,11 +55,16 @@ public:
     virtual bool loadState(const char *);
     virtual bool saveState(const char *);
 
+
+    // load and save classifier configuration
+    virtual bool loadTrainingFile(const char *, std::vector<Trainer> *);
+    virtual bool saveTrainingFile(const char *, std::vector<Trainer> *);
+
     // run the classifier over a single frame
     virtual bool run(const IplImage *, CObjectList *, bool);
         
     // train the classifier using given set of files
-    virtual bool train(TTrainingFileList&);
+    virtual bool train(TTrainingFileList&, const char *);
 
 private:
 
