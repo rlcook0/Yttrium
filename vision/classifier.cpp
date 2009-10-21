@@ -32,7 +32,7 @@ Classifier::Classifier()
     rng = cvRNG(-1);
  
     _features.load("dict.xml");
-    _regressor = new LogReg(_features.numFeatures(), double(0.01));
+    _regressor = new LogReg(_features.numFeatures(), double(0.001));
     
 }
     
@@ -440,7 +440,7 @@ bool Classifier::train(TTrainingFileList& fileList, const char *trainingFile)
     cout << "Training to be a pro! (We need a montage) " << endl << "* * * 80s Music begins playing... * * *" << endl;
     
     double diff = 1;
-    for (int e = 0; e < 1000 && diff > 0.001; e++)
+    for (int e = 0; e < 10000 && diff > 0.0001; e++)
     {
         for (unsigned int i = 0; i < values.size(); i++)
         {
