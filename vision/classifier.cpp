@@ -93,18 +93,27 @@ bool Classifier::loadTrainingFile(const char *filename, std::vector<Trainer> *tr
     if (infile.fail() || infile.eof()) return false;
     
     infile >> vars;
-    if (infile.fail() || infile.eof()) return false;
+    if (infile.fail() || infile.eof()) return false;    
     
     for (int i = 0; i < count; i++) 
     {
+    
+	    infile.ignore(1);
+	    
         Trainer t;
         infile >> t.truth;
+     	
+     	t.values = new double[vars + 1];
+        
+        double val;
         for (int j = 0; j <= vars; j ++) 
         {
             infile >> t.values[j];
         }
         trainers->push_back(t);
     }
+    
+    cout << "Loaded training feature values from: " << filename << endl;
     
     return true;
 }
@@ -375,12 +384,14 @@ bool Classifier::train(TTrainingFileList& fileList, const char *trainingFile)
     int maxMugs = INT_MAX;
     int maxOther = INT_MAX;
  
-    cout << "Processing images..." << endl;
-    smallImage = cvCreateImage(cvSize(32, 32), IPL_DEPTH_8U, 1);
     
-    bool extractVector = this->loadTrainingFile(trainingFile, &values);
+    bool extractVector = !this->loadTrainingFile(trainingFile, &values);
     
     if (extractVector) {
+    
+	    cout << "Processing images..." << endl;
+	    smallImage = cvCreateImage(cvSize(32, 32), IPL_DEPTH_8U, 1);
+    
         for (int i = 0; i < (int)fileList.files.size(); i++) {
             // show progress
             if (i % 10 == 0) showProgress(i, fileList.files.size());
