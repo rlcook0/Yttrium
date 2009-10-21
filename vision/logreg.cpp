@@ -97,13 +97,18 @@ void LogReg::add_to_batch(Trainer &t)
     this->add_to_batch(t.values, t.truth);
 }
 
-void LogReg::gradient_decent()
+double LogReg::gradient_decent()
 {
-    for (int j = 0; j <= this->num_variables; j++)
-        this->coeff[j] += this->learning_rate * this->batch[j];
-        
-    cout << "tp: " << tp << " fp: " << fp << " fn: " << fn << " tn: " << tn << endl;
+    double total = 0;
+    for (int j = 0; j <= this->num_variables; j++) {
+        double diff = this->learning_rate * this->batch[j];
+        total += diff;
+        this->coeff[j] += diff;
+    }
+    cout << "tp: " << tp << " fp: " << fp << " fn: " << fn << " tn: " << tn << " totaldiff: " << total << endl;
     tp = fp = fn = tn = 0;
     
     memset(this->batch, 0, sizeof(double) * (this->num_variables + 1));
+    
+    return total;
 }

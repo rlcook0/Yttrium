@@ -318,7 +318,9 @@ bool Classifier::train(TTrainingFileList& fileList)
     
     std::vector<Trainer> values;
     TemplateMatcher tm;
-    
+ 
+    int maxMugs = INT_MAX;
+    int maxOther = INT_MAX;
  
     cout << "Processing images..." << endl;
     smallImage = cvCreateImage(cvSize(32, 32), IPL_DEPTH_8U, 1);
@@ -329,6 +331,13 @@ bool Classifier::train(TTrainingFileList& fileList)
         // skip non-mug and non-other images (milestone only)
         if ((fileList.files[i].label == "mug") ||
             (fileList.files[i].label == "other")) {
+            
+            // Only use so many of each...
+            if (fileList.files[i].label == "mug") {
+                if (maxMugs-- < 0) continue;
+            } else if (fileList.files[i].label == "other") {
+                if (maxOther-- < 0) continue;
+            }
             
             // load the image
             image = cvLoadImage(fileList.files[i].filename.c_str(), 0);
@@ -360,13 +369,14 @@ bool Classifier::train(TTrainingFileList& fileList)
     
     cout << "Training to be a pro! (We need a montage) " << endl << "* * * 80s Music begins playing... * * *" << endl;
     
-    for (int e = 0; e < 100; e++)
+    double diff = 1;
+    for (int e = 0; e < 10000 && diff > 0.05; e++)
     {
         for (unsigned int i = 0; i < values.size(); i++)
         {
             _regressor->add_to_batch(values[i]); // Train on one set of scores. All features on one training image.
         }
-        _regressor->gradient_decent(); // Process batch (gradient vector)
+        diff = fabs(_regressor->gradient_decent()); // Process batch (gradient vector)
     }
     
     cout << endl << endl << "I'm ready. Let's DO THIS!" << endl;

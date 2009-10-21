@@ -26,7 +26,10 @@ public:
     bool predict(double *input);
     void add_to_batch(double *input, bool truth);
     void add_to_batch(Trainer &t);
-    void gradient_decent(); // process batch.
+    
+    // Process a single batch. Returns the total amount changed
+    // from the weights.
+    double gradient_decent(); // process batch.
     
 private:
     
