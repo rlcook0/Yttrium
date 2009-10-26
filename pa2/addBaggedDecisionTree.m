@@ -24,8 +24,22 @@
 %
 function DecisionTree = addBaggedDecisionTree(DigitSet, positiveLabel, depth)
 
-% CS221 TODO: implement this function
+    % CS221 TODO: implement this function
+    NewDigitSet = DigitSet;
 
+    % iterate M times to generate a row
+    for i = 1:length(DigitSet.pixels(:,1))
+        % generate a random # for a sample image
+        r = randi(length(DigitSet.pixels(:,1))-1)+1;
+
+        % fill in the new digit set with information from the randomly
+        % generated row taken from DigitSet
+        NewDigitSet.pixels(i,:) = DigitSet.pixels(r,:);
+        NewDigitSet.labels(i) = DigitSet.labels(r);
+        NewDigitSet.weights(i) = DigitSet.weights(r);
+    end
+
+    DecisionTree = growDecisionTree([], NewDigitSet, positiveLabel, depth);
 
 end
 

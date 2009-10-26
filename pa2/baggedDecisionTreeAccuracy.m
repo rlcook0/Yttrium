@@ -29,6 +29,47 @@ function accuracy = baggedDecisionTreeAccuracy(BaggedDecisionTreesSet, DigitTest
 
 % CS221 TODO: implement this function
 
+% 1. for each image in the test set, loop through all the trees that should
+%    classify that digit
+% 2. output label = the digit that the most trees in that batch vote for
+%    with confidence > 0.5
+% 3. if correct, tp++
 
+% if many bags of trees vote that an image is of a digit, then take the bag
+% that votes most for a digit
+  
+    [numImages x] = size(DigitTestSet.pixels);
+    
+    tp = 0;
+    total = numImages;
+    
+    % for each image in the test set
+    for image = 1:numImages
+        for index = 1:10
+            a(index) = 0;
+        end
+        
+        % for each bag of trees
+        for bagNum = 1:10
+            baggedTrees = BaggedDecisionTreesSet{bagNum};
+            % for each tree in that bag
+            for treeNum = 1:length(baggedTrees)
+                % get the tree's confidence it is the given digit
+                conf = positiveConfidence(baggedTrees{treeNum}, DigitTestSet.pixels(image, :));
+                if (conf > 0.5)
+                    a(bagNum) = a(bagNum) + 1;
+                end
+            end
+        end
+        
+        highestVote = max(a);
+        if (highestVote == DigitTestSet.labels(image))
+            tp = tp+1;
+        end
+    end
+
+    accuracy = tp / total;
 end
+
+
 
