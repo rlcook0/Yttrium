@@ -65,6 +65,13 @@ for pixel = 1:numPixels
 
         p1 = mlplus1 / ml1;
         p2 = mlplus2 / ml2;
+        if (ml1 == 0)
+            p1 = 0;
+        end
+        if (ml2 == 0)
+            p2 = 0;
+        end
+        
         infgain = start - ml1 * entropy(p1) - ml2 * entropy(p2);
         
         if (infgain > bestInfGain)
