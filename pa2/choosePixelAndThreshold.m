@@ -48,6 +48,19 @@ pixelNum = -1;
 % arr = -1;
 % notarr = -1;
 
+Q = repmat(DigitSet.pixels, [1 1 length(thresholds)]);
+t = reshape(thresholds, [1 1 length(thresholds)]);
+R = repmat(t, [size(Q, 1) size(Q, 2)]);
+
+diff = Q > R;
+weights = repmat(DigitSet.weights, [1 numPixels length(thresholds)]);
+mult = weights .* diff;
+
+mult_sum = sum(mult, 1);
+inclass_mult = repmat(DigitSet.labels == positiveLabel, [1 numPixels length(thresholds)]) .* mult;
+
+sum_mult_inclass = sum(inclass_mult, 1);
+
 for pixel = 1:numPixels
     A = repmat(DigitSet.pixels(:, pixel), 1, length(thresholds));
     B = repmat(thresholds, length(DigitSet.pixels(:, pixel)), 1);
