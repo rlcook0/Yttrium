@@ -32,54 +32,89 @@ function [pixelNum threshold] = choosePixelAndThreshold(DigitSet, positiveLabel)
 %       pixelNum = 34
 %       threshold = 0.2000
 
-[positiveCount totalCount] = initializeProbabilities(DigitSet, positiveLabel);
-start = totalCount * entropy(positiveCount / totalCount);
-
-pixelNum = -1;
-threshold = -1;
-bestInfGain = -inf;
+% [positiveCount totalCount] = initializeProbabilities(DigitSet, positiveLabel);
+% start = totalCount * entropy(positiveCount / totalCount);
 
 [numImages numPixels] = size(DigitSet.pixels);
 
-% fprintf('starting training with %d examples\n', numImages);
+thresholds =  0.1:0.1:0.9;
+all_inclass = sum(DigitSet.labels == positiveLabel);
+
+bestEnt = inf;
+pixelNum = -1;
+
+% bestInfGain = inf;
+% 
+% arr = -1;
+% notarr = -1;
+
 for pixel = 1:numPixels
-    for thresh = 0.1:0.1:0.9
-        mlplus1 = 0;
-        ml1 = 0;
-        
-        mlplus2 = 0;
-        ml2 = 0;
-        for image = 1:numImages
-            if (DigitSet.pixels(image, pixel) > thresh)
-                if (DigitSet.labels(image) == positiveLabel)
-                    mlplus1 = mlplus1 + DigitSet.weights(image);
-                end
-                ml1 = ml1 + DigitSet.weights(image);
-            else
-                if (DigitSet.labels(image) == positiveLabel)
-                    mlplus2 = mlplus2 + DigitSet.weights(image);
-                end
-                ml2 = ml2 + DigitSet.weights(image);
-            end
-        end
-
-        p1 = mlplus1 / ml1;
-        p2 = mlplus2 / ml2;
-        infgain = start - ml1 * entropy(p1) - ml2 * entropy(p2);
-        
-        if (infgain > bestInfGain)
-            pixelNum = pixel;
-            threshold = thresh;
-            bestInfGain = infgain;
-        end
+    A = repmat(DigitSet.pixels(:, pixel), 1, length(thresholds));
+    B = repmat(thresholds, length(DigitSet.pixels(:, pixel)), 1);
+    pixelsOverThreshold = (A > B);
+    weighted = repmat(DigitSet.weights, 1, length(thresholds)) .* pixelsOverThreshold;
+    summed = sum(weighted, 1);
+    
+    inclass = repmat(DigitSet.labels == positiveLabel, 1, length(thresholds)) .* weighted;
+    summed_inclass = sum(inclass, 1);
+    
+    p1 = summed_inclass ./ summed;
+    p2 = (all_inclass - summed_inclass) ./ (numImages - summed);
+    
+    p1_ent = arrayfun(@(x) entropy(x), p1);
+    p2_ent = arrayfun(@(x) entropy(x), p2);
+    
+    total_ent = summed .* p1_ent + (numImages - summed) .* p2_ent;
+    [val, thresh] = min(total_ent);
+    
+    if (val < bestEnt)
+%         disp([summed_inclass; summed; (all_inclass - summed_inclass); (numImages - summed)]);
+       
+        bestEnt = val;
+        pixelNum = pixel;
+%         notarr = pixelNum;
+        threshold = thresholds(thresh);
     end
+    
+    
+%     for thresh = 0.1:0.1:0.9
+%         mlplus1 = 0;
+%         ml1 = 0;
+%         
+%         mlplus2 = 0;
+%         ml2 = 0;
+% 
+%         for image = 1:numImages
+%             if (DigitSet.pixels(image, pixel) > thresh)
+%                 if (DigitSet.labels(image) == positiveLabel)
+%                     mlplus1 = mlplus1 + DigitSet.weights(image);
+%                 end
+%                 ml1 = ml1 + DigitSet.weights(image);
+%             else
+%                 if (DigitSet.labels(image) == positiveLabel)
+%                     mlplus2 = mlplus2 + DigitSet.weights(image);
+%                 end
+%                 ml2 = ml2 + DigitSet.weights(image);
+%             end
+%         end
+% 
+%         p1 = mlplus1 / ml1;
+%         p2 = mlplus2 / ml2;
+%         %infgain = start - ml1 * entropy(p1) - ml2 * entropy(p2);
+%         infgain = ml1 * entropy(p1) + ml2 * entropy(p2);
+%         if (infgain < bestInfGain)
+%             arr = pixel;
+%             bestInfGain = infgain;
+%         end
+%     end
 end
+% 
+% disp([arr notarr; bestInfGain bestEnt]);
 
 end
-
 
 function entropy = entropy(p)
-    if (p == 0 || p == 1)
+    if (p == 0 || p == 1 || isnan(p))
         entropy = 0;
     else
         entropy = -p * log2(p) - (1 - p) * log2(1 - p);
