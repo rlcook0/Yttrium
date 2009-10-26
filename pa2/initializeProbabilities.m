@@ -34,5 +34,14 @@ function [positiveCount totalCount] = initializeProbabilities(DigitSet, positive
 %       positiveCount = 1008;
 %       totalCount = 10000;
 
+totalCount = sum(DigitSet.weights);
+% positiveCount = sum((DigitSet.labels == positiveLabel) & DigitSet.weights);
+
+positiveCount = 0;
+for i = 1:length(DigitSet.labels)
+    if (DigitSet.labels(i) == positiveLabel)
+        positiveCount = positiveCount + DigitSet.weights(i);
+    end
+end
 
 end

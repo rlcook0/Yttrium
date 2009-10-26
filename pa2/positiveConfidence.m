@@ -24,6 +24,16 @@ function conf = positiveConfidence(DecisionTree, Digit)
 %   should return
 %       conf = 0.0352
 
+currentNode = DecisionTree(1);
+while (currentNode.pixelNum >= 0)
+    if (Digit(currentNode.pixelNum) > currentNode.threshold)
+        currentNode = DecisionTree(currentNode.leftChild);
+    else
+        currentNode = DecisionTree(currentNode.rightChild);
+    end
+end
+
+conf = currentNode.positiveCount / currentNode.totalCount;
 
 end
 

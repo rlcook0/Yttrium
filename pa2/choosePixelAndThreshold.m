@@ -32,10 +32,59 @@ function [pixelNum threshold] = choosePixelAndThreshold(DigitSet, positiveLabel)
 %       pixelNum = 34
 %       threshold = 0.2000
 
+[positiveCount totalCount] = initializeProbabilities(DigitSet, positiveLabel);
+start = totalCount * entropy(positiveCount / totalCount);
+
+pixelNum = -1;
+threshold = -1;
+bestInfGain = -inf;
+
+[numImages numPixels] = size(DigitSet.pixels);
+
+% fprintf('starting training with %d examples\n', numImages);
+for pixel = 1:numPixels
+    for thresh = 0.1:0.1:0.9
+        mlplus1 = 0;
+        ml1 = 0;
+        
+        mlplus2 = 0;
+        ml2 = 0;
+        for image = 1:numImages
+            if (DigitSet.pixels(image, pixel) > thresh)
+                if (DigitSet.labels(image) == positiveLabel)
+                    mlplus1 = mlplus1 + DigitSet.weights(image);
+                end
+                ml1 = ml1 + DigitSet.weights(image);
+            else
+                if (DigitSet.labels(image) == positiveLabel)
+                    mlplus2 = mlplus2 + DigitSet.weights(image);
+                end
+                ml2 = ml2 + DigitSet.weights(image);
+            end
+        end
+
+        p1 = mlplus1 / ml1;
+        p2 = mlplus2 / ml2;
+        infgain = start - ml1 * entropy(p1) - ml2 * entropy(p2);
+        
+        if (infgain > bestInfGain)
+            pixelNum = pixel;
+            threshold = thresh;
+            bestInfGain = infgain;
+        end
+    end
+end
 
 end
 
 
+function entropy = entropy(p)
+    if (p == 0 || p == 1)
+        entropy = 0;
+    else
+        entropy = -p * log2(p) - (1 - p) * log2(1 - p);
+    end
+end
 % Important note:
 %  This function will get called millions of times as you are running
 %  experiments; thus, you might want to consider some optimization tricks.

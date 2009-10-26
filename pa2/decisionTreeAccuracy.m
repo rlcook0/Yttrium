@@ -38,7 +38,25 @@ function accuracy = decisionTreeAccuracy(DecisionTrees, DigitTestSet)
 %   should return
 %       accuracy = 0.3000
 
+[numImages, ~] = size(DigitTestSet.pixels);
 
+tp = 0;
+total = numImages;
 
+for image = 1:numImages
+    bestScore = 0;
+    bestDigit = -1;
+    for treeNum = 1:length(DecisionTrees)
+        conf = positiveConfidence(DecisionTrees{treeNum}, DigitTestSet.pixels(image, :)');
+        if (conf > bestScore)
+            bestDigit = treeNum - 1;
+            bestScore = conf;
+        end
+    end
+    
+    if (bestDigit == DigitTestSet.labels(image))
+        tp = tp + 1;
+    end
 end
 
+accuracy = tp / total;
