@@ -38,7 +38,7 @@ function [pixelNum threshold] = choosePixelAndThreshold(DigitSet, positiveLabel)
 [numImages numPixels] = size(DigitSet.pixels);
 
 thresholds =  0.1:0.1:0.9;
-all_inclass = sum(DigitSet.labels == positiveLabel);
+all_inclass = sum((DigitSet.labels == positiveLabel) .* DigitSet.weights);
 
 % bestEnt = inf;
 % pixelNum = -1;
