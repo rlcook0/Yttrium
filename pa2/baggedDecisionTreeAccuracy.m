@@ -49,6 +49,9 @@ function accuracy = baggedDecisionTreeAccuracy(BaggedDecisionTreesSet, DigitTest
             a(index) = 0;
         end
         
+        highestVote = -inf;
+        digitVoted = -1;
+        
         % for each bag of trees
         for bagNum = 1:10
             baggedTrees = BaggedDecisionTreesSet{bagNum};
@@ -60,10 +63,16 @@ function accuracy = baggedDecisionTreeAccuracy(BaggedDecisionTreesSet, DigitTest
                     a(bagNum) = a(bagNum) + 1;
                 end
             end
+            
+            % keep track of the highest digit voted for by the bags
+            % representing that class
+            if (a(bagNum) > highestVote)
+                highestVote = a(bagNum);
+                digitVoted = bagNum - 1;
+            end
         end
         
-        highestVote = max(a);
-        if (highestVote == DigitTestSet.labels(image))
+        if (digitVoted == DigitTestSet.labels(image))
             tp = tp+1;
         end
     end
