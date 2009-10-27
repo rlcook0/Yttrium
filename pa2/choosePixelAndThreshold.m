@@ -44,7 +44,7 @@ thresholds_pixels = repmat(threshold3d, [size(pixels_thresholds, 1) size(pixels_
 pixels_over_thresholds = pixels_thresholds > thresholds_pixels;
 
 % Weight each pixel over a threshold, then sum it over all images.
-weights_thresholds = repmat(DigitSet.weights_thresholds, [1 numPixels length(thresholds)]);
+weights_thresholds = repmat(DigitSet.weights, [1 numPixels length(thresholds)]);
 weighted_pixels_over_thresholds = weights_thresholds .* pixels_over_thresholds;
 pixels_threshold_values = sum(weighted_pixels_over_thresholds, 1);
 
