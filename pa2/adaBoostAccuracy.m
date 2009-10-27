@@ -34,6 +34,56 @@
 function accuracy = adaBoostAccuracy(AdaBoostTreesSet, DigitTestSet)
 
 % CS221 TODO: implement this function
+    [numImages x] = size(DigitTestSet.pixels);
+    
+    tp = 0;
+    total = numImages;
+    
+    % for each image in the test set
+    for image = 1:numImages
+        
+        
+        highestVote = -inf;
+        digitVoted = -1;
+        
+        % for each bag of trees
+        for bagNum = 1:10
+            
+        
+            baggedTrees = AdaBoostTreesSet{bagNum};
+            % for each tree in that bag
+            
+            a_j = zeros(length(baggedTrees),1);
+            
+            for treeNum = 1:length(baggedTrees)
+                % get the tree's confidence it is the given digit
+                t = baggedTrees{treeNum};
+                conf = positiveConfidence(t.tree, DigitTestSet.pixels(image, :));
+                if (conf > 0.5)
+                    a_j(treeNum) = t.weight;
+                else
+                    a_j(treeNum) = - t.weight;
+                end
+            end
+            
+            a_k = sum(a_j);
+            
+            % keep track of the highest digit voted for by the bags
+            % representing that class
 
+            if (a_k > highestVote)
+                highestVote = a_k;
+                digitVoted = bagNum - 1;
+            end
+            
+        
+        end
+        
+        if (digitVoted == DigitTestSet.labels(image))
+            tp = tp+1;
+        end
+        
+    end
 
+    accuracy = tp / total;
 end

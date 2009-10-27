@@ -37,9 +37,64 @@ function [DecisionTree, alpha, DigitSet] = ...
     addAdaBoostDecisionTree(DigitSet, positiveLabel, depth)
 
 % This is the hypothesis that you learn on the sampled training examples
-DecisionTree = growDecisionTree([], DigitSet, positiveLabel, depth);
+%    DecisionTree = growDecisionTree([], DigitSet, positiveLabel, depth);
 
-% CS221 TODO: finish implementing this function
+%     NewDigitSet = DigitSet;
+% 
+%     m = length(DigitSet.pixels(:,1));
+%     
+%     sample = randsample(length(DigitSet.weights), m, true, DigitSet.weights);
+%     for i = 1:m
+% 
+%         r = sample(i);
+%         if (r == 0)
+%             r = 1;
+%         end
+%         % fill in the new digit set with information from the randomly
+%         % generated row taken from DigitSet
+%         NewDigitSet.pixels(i,:) = DigitSet.pixels(r,:);
+%         NewDigitSet.weights(i) = DigitSet.weights(r);
+%         NewDigitSet.labels(i) = DigitSet.labels(r);
+% 
+%     end
+% 
+%     DigitSet = NewDigitSet;
+    
+    DecisionTree = growDecisionTree([], DigitSet, positiveLabel, depth);
+    
+    error = 0.0;
+    confs = DigitSet.weights; % preallocate
+    
+    for i = 1:length(DigitSet.weights)
+        conf = positiveConfidence(DecisionTree, DigitSet.pixels(i,:));
+        if (conf <= 0.5)
+            error = error + DigitSet.weights(i);
+        end
+        confs(i) = conf;
+    end
+
+    confs;
+    if (error > 0.99999) 
+        error = 1.0
+    end
+    error
+    
+    alpha = 0.5 * log( (1-error) / error );
+   
+    for i = 1:length(DigitSet.weights)
+        
+        a = alpha;
+        if (confs(i) > 0.5)
+            a = 0 - a;
+        end
+        
+        % Update weights
+        DigitSet.weights(i) = DigitSet.weights(i) * exp(a); 
+    end
+
+    
+    % normalize (z part)   
+    DigitSet.weights = DigitSet.weights / sum(DigitSet.weights); 
 
 end
 
