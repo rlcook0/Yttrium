@@ -38,14 +38,19 @@ function accuracy = decisionTreeAccuracy(DecisionTrees, DigitTestSet)
 %   should return
 %       accuracy = 0.3000
 
-[numImages, ~] = size(DigitTestSet.pixels);
+[numImages x] = size(DigitTestSet.pixels);
 
 tp = 0;
 total = numImages;
 
+% loop through all the images
 for image = 1:numImages
-    bestScore = 0;
+    bestScore = -inf;
     bestDigit = -1;
+    
+    % loop through each of the trees, seeking out the tree with the highest
+    % confidence. that tree will determine our vote for what digit this
+    % image might be
     for treeNum = 1:length(DecisionTrees)
         conf = positiveConfidence(DecisionTrees{treeNum}, DigitTestSet.pixels(image, :)');
         if (conf > bestScore)
@@ -54,9 +59,16 @@ for image = 1:numImages
         end
     end
     
+    % if our guess is correct, add one to the number of correctly
+    % identified digits
     if (bestDigit == DigitTestSet.labels(image))
         tp = tp + 1;
+    end
+    if (bestScore == 0)
+        best = bestScore
     end
 end
 
 accuracy = tp / total;
+
+
