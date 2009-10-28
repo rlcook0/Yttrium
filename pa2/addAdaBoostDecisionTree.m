@@ -63,38 +63,33 @@ function [DecisionTree, alpha, DigitSet] = ...
     DecisionTree = growDecisionTree([], DigitSet, positiveLabel, depth);
     
     error = 0.0;
-    confs = DigitSet.weights; % preallocate
+    corrects = zeros(length(DigitSet.weights), 1); % preallocate
     
     for i = 1:length(DigitSet.weights)
         conf = positiveConfidence(DecisionTree, DigitSet.pixels(i,:));
-        if (conf <= 0.5)
+        yx = (DigitSet.labels(i) == positiveLabel);
+        hx = (conf > 0.5);
+        if (hx ~= yx)
             error = error + DigitSet.weights(i);
         end
-        confs(i) = conf;
+        corrects(i) = (hx == yx);
     end
-
-    confs;
-    if (error > 0.99999) 
-        error = 1.0
-    end
-    error
     
     alpha = 0.5 * log( (1-error) / error );
-   
+    
     for i = 1:length(DigitSet.weights)
         
         a = alpha;
-        if (confs(i) > 0.5)
+        if (corrects(i))
             a = 0 - a;
         end
-        
         % Update weights
         DigitSet.weights(i) = DigitSet.weights(i) * exp(a); 
     end
-
+  
     
     % normalize (z part)   
     DigitSet.weights = DigitSet.weights / sum(DigitSet.weights); 
-
+    
 end
 

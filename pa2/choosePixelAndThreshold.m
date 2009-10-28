@@ -33,7 +33,9 @@ function [pixelNum threshold] = choosePixelAndThreshold(DigitSet, positiveLabel)
 %       threshold = 0.2000
 
 % Useful values.
-[numImages numPixels] = size(DigitSet.pixels);
+numPixels = size(DigitSet.pixels, 2);
+%numImages = size(DigitSet.pixels, 1);
+weightedNumImages = sum(DigitSet.weights);
 thresholds =  0.1:0.1:0.9;
 num_positiveClass = sum((DigitSet.labels == positiveLabel) .* DigitSet.weights);
 
@@ -54,7 +56,7 @@ pixels_inclass_values = sum(weighted_inclass, 1);
 
 % Compute probability values for each pixel at each threshold.
 p1 = pixels_inclass_values ./ pixels_threshold_values;
-p2 = (num_positiveClass - pixels_inclass_values) ./ (numImages - pixels_threshold_values);
+p2 = (num_positiveClass - pixels_inclass_values) ./ (weightedNumImages - pixels_threshold_values);
 
 % Convert probability to entropy.
 p1_entropy = -p1 .* log2(p1) - (1 - p1) .* log2(1 - p1);
@@ -65,7 +67,7 @@ p1_entropy(isnan(p1_entropy)) = 0;
 p2_entropy(isnan(p2_entropy)) = 0;
 
 % Convert to information gain-relevant entropy.
-total_entropy = pixels_threshold_values .* p1_entropy + (numImages - pixels_threshold_values) .* p2_entropy;
+total_entropy = pixels_threshold_values .* p1_entropy + (weightedNumImages - pixels_threshold_values) .* p2_entropy;
 
 % Find the minimum entropy threshold,pixel pair.
 [entropy indexes] = min(total_entropy, [], 3);

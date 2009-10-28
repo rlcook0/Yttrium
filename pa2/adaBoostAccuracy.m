@@ -46,34 +46,33 @@ function accuracy = adaBoostAccuracy(AdaBoostTreesSet, DigitTestSet)
         highestVote = -inf;
         digitVoted = -1;
         
-        % for each bag of trees
-        for bagNum = 1:10
+        % for each label of trees
+        for label = 1:10
             
-        
-            baggedTrees = AdaBoostTreesSet{bagNum};
             % for each tree in that bag
             
-            a_j = zeros(length(baggedTrees),1);
-            
-            for treeNum = 1:length(baggedTrees)
+            a_j = zeros(length(AdaBoostTreesSet{label}),1);
+            normc = 0.0;
+            for treeNum = 1:length(AdaBoostTreesSet{label})
                 % get the tree's confidence it is the given digit
-                t = baggedTrees{treeNum};
+                t = AdaBoostTreesSet{label}{treeNum};
                 conf = positiveConfidence(t.tree, DigitTestSet.pixels(image, :));
-                if (conf > 0.5)
+                if ( (conf > 0.5) )
                     a_j(treeNum) = t.weight;
                 else
                     a_j(treeNum) = - t.weight;
                 end
+                normc = normc + t.weight;
             end
             
-            a_k = sum(a_j);
+            a_k = sum(a_j) / normc;
             
             % keep track of the highest digit voted for by the bags
             % representing that class
 
             if (a_k > highestVote)
                 highestVote = a_k;
-                digitVoted = bagNum - 1;
+                digitVoted = label - 1;
             end
             
         
