@@ -31,8 +31,8 @@ setVars();
 % If it is, you can then change EXPLORATION_RUNS to 1000000 
 % and run it for real.  If your model is not correct, then 
 % you can debug now, without loss of your time.
-%EXPLORATION_RUNS = 1000000;
-EXPLORATION_RUNS = 10;
+EXPLORATION_RUNS = 1000000;
+%EXPLORATION_RUNS = 10;
 
 
 %Create the transition model
