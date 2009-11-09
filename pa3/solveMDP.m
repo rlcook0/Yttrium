@@ -112,7 +112,7 @@ function pistar = solveMDP(tmodel)
         max_a   = 0.0;
         
         for a=1:DISCRETE_ACTION_COUNT
-            sum = expectedValue(tmodel, s, a, prevValueFunction);
+            sum = expectedValue(tmodel, s, a, valueFunction);
             if (sum > max_sum)
                 max_sum = sum;
                 max_a = a;
