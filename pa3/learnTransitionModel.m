@@ -49,8 +49,8 @@ tic
 for i=1:EXPLORATION_RUNS
     
     if mod(i,1000) == 0
-        %Uncomment to see incremental progress
-        %i  
+        % Uncomment to see incremental progress
+        fprintf('On line %d of %d\n', i, EXPLORATION_RUNS);  
     end
 
     s0 = getRandomState();
