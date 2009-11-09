@@ -46,9 +46,11 @@ function pistar = solveMDP(tmodel)
     %  Run value iteration to find the value of each state
     
     GAMMA = 0.8;
+    NUM_ITERATIONS = 60;
     
     % Initialize the value function
     prevValueFunction = zeros(1,DISCRETE_STATE_COUNT);
+    valueFunction = zeros(1,DISCRETE_STATE_COUNT);
     % and the optimal policy
     pistar = zeros(1,DISCRETE_STATE_COUNT);
     
@@ -58,6 +60,37 @@ function pistar = solveMDP(tmodel)
     % 4.2 Implement the (synchronous) value iteration algorithm
     %
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    
+    % For every state s belonging to S, update
+    %   V(s) := R(s) + max gamma sum Ps(s')V(s')
+    
+    for i = 1:NUM_ITERATIONS
+        curr_iteration = i
+        for s = 1:DISCRETE_STATE_COUNT
+            
+            % calculate the maximum expected value over all actions from
+            % this state
+            max_ev = -inf;
+            for a = 1:DISCRETE_ACTION_COUNT
+                ev = expectedValue(tmodel, s, a, prevValueFunction);
+                if (ev > max_ev)
+                    max_ev = ev;
+                end
+            end
+            
+            valueFunction(i) = reward(s) + (max_ev * GAMMA);
+        end
+        
+        % now that synchronous updates are complete, set prevValueFunction
+        % to valueFunction
+        prevValueFunction = valueFunction;
+    end
+    
+    s0 = setStateToInitial();
+    s0_disc = discretizeState(s0);
+    
+    % print out V(s0)
+    valueFunction(s0_disc)
     
     display('Solved the MDP');
     
