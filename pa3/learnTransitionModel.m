@@ -53,14 +53,17 @@ for i=1:EXPLORATION_RUNS
         %i  
     end
 
-    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    %
-    % YOUR CODE HERE:  
-    % 4.1 Implement the data collection strategy
-    %     described in the handout. The end result
-    %     should be a learned transition model.
-    %
-    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    s0 = getRandomState();
+    s0_disc = discretizeState(s0);
+    
+    for a = 1:DISCRETE_ACTION_COUNT
+        action = undiscretizeAction(a);
+        
+        s1 = simulate(s0, action);
+        s1_disc = discretizeState(s1);
+        
+        tmodel = transitionModelAddCount(tmodel, s0_disc, a, s1_disc);
+    end
     
 end
 
