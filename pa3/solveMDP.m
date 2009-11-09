@@ -74,6 +74,21 @@ function pistar = solveMDP(tmodel)
     %
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     
+    for i=1:DISCRETE_STATE_COUNT
+        max_sum = -inf;
+        max_a   = 0.0;
+        
+        for a=1:DISCRETE_ACTION_COUNT
+            sum = expectedValue(tmodel, s, a, prevValueFunction);
+            if (sum > max_sum)
+                max_sum = sum;
+                max_a = a;
+            end 
+        end
+        
+        pistar(i) = a;
+    end
+    
     
     % Save the policy and value function
     vf = prevValueFunction; %vf should be the final value function
