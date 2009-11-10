@@ -107,7 +107,7 @@ function pistar = solveMDP(tmodel)
     %
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     
-    for i=1:DISCRETE_STATE_COUNT
+    for s=1:DISCRETE_STATE_COUNT
         max_sum = -inf;
         max_a   = 0.0;
         
@@ -119,7 +119,7 @@ function pistar = solveMDP(tmodel)
             end 
         end
         
-        pistar(i) = a;
+        pistar(s) = max_a;
     end
     
     
