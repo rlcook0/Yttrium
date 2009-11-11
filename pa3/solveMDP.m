@@ -78,7 +78,7 @@ function pistar = solveMDP(tmodel)
                 end
             end
             
-            valueFunction(s) = reward(s) + (max_ev * GAMMA);
+            valueFunction(s) = rewardRubber(s) + (max_ev * GAMMA);
         end
         
         % now that synchronous updates are complete, set prevValueFunction
@@ -127,8 +127,8 @@ function pistar = solveMDP(tmodel)
     vf = valueFunction; %vf should be the final value function
     
     %Change this filename to avoid overwriting  previous policies
-    save 'OptimalPolicy' pistar vf;
+    save 'OptimalPolicy6' pistar vf;
     
-    display('Optimal Policy saved');
+    display('Optimal Policy 6 saved');
 
 end
