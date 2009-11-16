@@ -32,7 +32,9 @@ DEFS = -g -O2
 CC = g++
 #OPENCV_LIB_DIR = /afs/ir.stanford.edu/class/cs221/lib64/
 
-CCFLAGS = -Wall $(DEFS) -I$(OPENCV_INC_DIR) -I$(XML_INC_DIR)
+OPENSURF = ./OpenSURF/
+
+CCFLAGS = -Wall $(DEFS) -I$(OPENCV_INC_DIR) -I$(XML_INC_DIR) -I$(OPENSURF)
 LDFLAGS = -L$(OPENCV_LIB_DIR) $(XML_LIB)
 
 SUFFIX = $(firstword $(suffix $(SRC)))
