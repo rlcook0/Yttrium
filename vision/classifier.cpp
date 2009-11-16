@@ -21,8 +21,9 @@
  
 #include "classifier.h"
 #include "logreg.h"
- 
- 
+
+#include "surf.h"
+
 // Classifier class ---------------------------------------------------------
  
 // default constructor
@@ -413,6 +414,11 @@ bool Classifier::train(TTrainingFileList& fileList, const char *trainingFile)
                     cerr << "ERROR: could not load image " << fileList.files[i].filename.c_str() << endl;
                     continue;
                 }
+                
+                // AHHH
+                std::vector<Ipoint> pts;
+                Surf surf(image, pts);
+                surf.getDescriptors(false);
             
                 // resize to 32 x 32
                 cvResize(image, smallImage);

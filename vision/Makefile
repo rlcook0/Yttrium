@@ -35,7 +35,7 @@ CC = g++
 OPENSURF = ./OpenSURF/
 
 CCFLAGS = -Wall $(DEFS) -I$(OPENCV_INC_DIR) -I$(XML_INC_DIR) -I$(OPENSURF)
-LDFLAGS = -L$(OPENCV_LIB_DIR) $(XML_LIB)
+LDFLAGS = -L$(OPENCV_LIB_DIR) $(XML_LIB) -L$(OPENSURF)
 
 SUFFIX = $(firstword $(suffix $(SRC)))
 OBJ = $(SRC:$(SUFFIX)=.o)
