@@ -56,7 +56,9 @@ function localize(options)
 		%CS221 TASK 4
 		% You'll need to handle the 'forgetful robot'
 		% (i.e., no history) case here
-
+        
+        beliefMap.beliefs = ones(size(beliefMap.beliefs));
+        beliefMap.beliefs = beliefMap.beliefs / sum(sum(beliefMap.beliefs));
 	
 		%END OF CS221 TASK 4
 		end
@@ -112,17 +114,20 @@ function beliefMap = beliefMapInitializeBeliefs(beliefMap, ...
 		% Use the initialPosition variable to set
 		% beliefMap.beliefs correctly
 	
-		
-		% END OF CS221 TASK 1
+        %pos = beliefMapCoordsFromLogCoords(beliefMap, initialPosition);
+        pos = initialPosition;
+        
+		beliefMap.beliefs = zeros(size(beliefMap.beliefs));
+		beliefMap.beliefs(pos(1), pos(2)) = 1;
 	else
 		% CS221 TASK 3
 		% In this version of the experiment, assume
 		% the robot does not know where it is starting
 		% (ignore initialPosition). Initialize the
 		% beliefMap to a uniform distribution over free squares
-		
 
-		% END OF CS221 TASK 3
+		beliefMap.beliefs = ones(size(beliefMap.beliefs));
+        beliefMap.beliefs = beliefMap.beliefs / sum(sum(beliefMap.beliefs));
 	end
 
 
@@ -162,7 +167,39 @@ function beliefMap = beliefMapUpdate(beliefMap, t, actionModel, sensorModel, rob
 	% See sensorModelGetProbabilities below
 	% (search for 'CS221 TASK 2')
 
-
+    action = robotSim.action;
+    actionModel = actionModelSetAction(actionModel, action);
+    
+    beliefMap.buffer = zeros(size(beliefMap.beliefs));
+    
+    max_x = size(beliefMap.beliefs, 1);
+    max_y = size(beliefMap.beliefs, 2);
+    
+    for x = 1:max_x
+        for y = 1:max_y
+            s = [x y];
+            total = 0;
+            for ii = -1:1
+                for jj = -1:1
+                    s_prime = s + [ii jj];
+                    actionModel = actionModelSetState(actionModel, s);
+                    new_prob = actionModelGetProbability(actionModel, s_prime);
+                    if (new_prob > 0)
+                        old_value = beliefMap.beliefs(s_prime(1), s_prime(2));
+                        total = total + old_value * new_prob;
+                    end
+                end
+            end
+            
+            beliefMap.buffer(s(1), s(2)) = total;
+        end
+    end
+    
+    M = sensorModelGetProbabilities(sensorModel, t, robotSim, beliefMap);
+    
+    alpha = 0.1;
+    beliefMap.beliefs = alpha * (beliefMap.buffer .* M);
+    beliefMap.beliefs = beliefMap.beliefs / sum(sum(beliefMap.beliefs));
 	%END CS221 TASK 2
 
 
@@ -200,6 +237,10 @@ function p = laserProbability(reading, mapdist)
 	%probability mass to negative readings. 
 	%You may find the matlab functions normpdf and normcdf useful
 
+    P = normcdf([0 inf], mapdist, sigma);
+    after_zero = P(2) - P(1);
+    
+    p = normpdf(reading, mapdist, sigma) / after_zero;
 
 	%END CS221 TASK 5
 end
