@@ -1,0 +1,63 @@
+ActionModel
+	isRandom: 1 if random, 0 if simple
+	rows: size of the map
+	cols: size of the map
+	action: the action to condition on (same format as a RobotSimulation action)
+	actionIndex: cached value of offsetToIndex(action)
+	state: the previous state to condition on ( a row,col pair)
+	denominator: normalization constant
+	probs: used by simple model. probs(i,j) is probability of moving by indexToOffset(j) given action i
+
+BeliefMap
+	beliefs: probability distribution over cells
+	buffer: temporary variable you may use while updating beliefs
+	cellWidth: the width of a BeliefMap cell in ObstacleMap cells
+	metersPerCell: the width of a BeliefMap cell in meters
+	freeMask: freeMask(i,j) == 1 iff cell (i,j) is free
+	distances: distances(i,j,k) gives the distance to a wall in BeliefMap cells
+in  direction k from cell (i,j)
+
+ImageOutputOptions
+	showImages: if true, displays images while localize runs
+	saveImages: if true, saves images to disk
+	framesPerImage: number of frames between drawing each image 
+
+ObstacleMap : this loads the ppm file and is used to initialize the BeliefMap. 
+	image : the image from the ppm file
+	metersPerCell
+	types : a matrix specifying the type of each cell
+		UNKNOWN = 0;
+		OCCUPIED = 1;
+		FREE = 2;
+
+
+Options
+	imageOutputOptions
+	outputTotalError
+	mapFilepath
+	logFilepath
+	sensorModel
+	actionModel
+	history
+	kidnapped
+
+RobotLog
+	%Contains the raw data that gets downsampled into the state that's
+	%stored in RobotSimulation
+	%deadReckon(i,:) = dead reckoning position at time i
+	%deadReckon(i,1) is x coordinate, deadReckon(i,2) is y coordinate
+	deadReckon
+	% laser(t,NORTH) gives laser distance in the NORTH direction
+	% same for the other 3 cardinal directions
+	laser
+	%same format as deadReckon, but gives true coords
+	actual
+
+RobotSimulation
+	log
+	%beliefMap row, col coordinates of the robot at time 0
+	initialPosition
+	%action(i,:) gives the difference in beliefMap row, col coordinates between time i-1 and time i
+	action
+	%Same format as RobotLog.laser, but converted to BeliefMap cell distances
+	laser
