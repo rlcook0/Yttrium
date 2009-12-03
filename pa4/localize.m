@@ -113,12 +113,9 @@ function beliefMap = beliefMapInitializeBeliefs(beliefMap, ...
 		% robot knows exactly where it is starting.
 		% Use the initialPosition variable to set
 		% beliefMap.beliefs correctly
-	
-        %pos = beliefMapCoordsFromLogCoords(beliefMap, initialPosition);
-        pos = initialPosition;
-        
+
 		beliefMap.beliefs = zeros(size(beliefMap.beliefs));
-		beliefMap.beliefs(pos(1), pos(2)) = 1;
+		beliefMap.beliefs(initialPosition(1), initialPosition(2)) = 1;
 	else
 		% CS221 TASK 3
 		% In this version of the experiment, assume
@@ -167,39 +164,41 @@ function beliefMap = beliefMapUpdate(beliefMap, t, actionModel, sensorModel, rob
 	% See sensorModelGetProbabilities below
 	% (search for 'CS221 TASK 2')
 
-    action = robotSim.action;
-    actionModel = actionModelSetAction(actionModel, action);
-    
     beliefMap.buffer = zeros(size(beliefMap.beliefs));
     
+    action = robotSim.action(t,:);
+    actionModel = actionModelSetAction(actionModel, action);
+
     max_x = size(beliefMap.beliefs, 1);
     max_y = size(beliefMap.beliefs, 2);
     
     for x = 1:max_x
         for y = 1:max_y
+            if (beliefMap.freeMask(x, y) == 0)
+                continue
+            end
+            
             s = [x y];
-            total = 0;
-            for ii = -1:1
-                for jj = -1:1
-                    s_prime = s + [ii jj];
-                    actionModel = actionModelSetState(actionModel, s);
-                    new_prob = actionModelGetProbability(actionModel, s_prime);
-                    if (new_prob > 0)
-                        old_value = beliefMap.beliefs(s_prime(1), s_prime(2));
-                        total = total + old_value * new_prob;
+            val = beliefMap.beliefs(x, y);
+            actionModel = actionModelSetState(actionModel, s);
+            
+            for i = -1:1
+                for j = -1:1
+                    s_prime = s + [i j];
+                    prob = actionModelGetProbability(actionModel, s_prime);
+                    if (prob > 0)
+                        beliefMap.buffer(s_prime(1), s_prime(2)) = ...
+                            beliefMap.buffer(s_prime(1), s_prime(2)) + val * prob;
                     end
                 end
             end
-            
-            beliefMap.buffer(s(1), s(2)) = total;
         end
-    end
+    end                 
     
     M = sensorModelGetProbabilities(sensorModel, t, robotSim, beliefMap);
-    
-    alpha = 0.1;
-    beliefMap.beliefs = alpha * (beliefMap.buffer .* M);
+    beliefMap.beliefs = beliefMap.buffer .* M;
     beliefMap.beliefs = beliefMap.beliefs / sum(sum(beliefMap.beliefs));
+    
 	%END CS221 TASK 2
 
 
