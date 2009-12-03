@@ -178,14 +178,15 @@ function beliefMap = beliefMapUpdate(beliefMap, t, actionModel, sensorModel, rob
                 continue
             end
             
-            s = [x y];
-            val = beliefMap.beliefs(x, y);
-            actionModel = actionModelSetState(actionModel, s);
-            
+            s_prime = [x y];
             for i = -1:1
                 for j = -1:1
-                    s_prime = s + [i j];
+                    s = s_prime + [i j];
+                    val = beliefMap.beliefs(s(1), s(2));
+                    
+                    actionModel = actionModelSetState(actionModel, s);
                     prob = actionModelGetProbability(actionModel, s_prime);
+                    
                     if (prob > 0)
                         beliefMap.buffer(s_prime(1), s_prime(2)) = ...
                             beliefMap.buffer(s_prime(1), s_prime(2)) + val * prob;
