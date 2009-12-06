@@ -44,7 +44,7 @@ protected:
     CvRNG rng;
 
     // CS221 TO DO: ADD YOUR MEMBER VARIABLES HERE
-    std::vector<double> mugFeatures;
+    //std::vector<double> mugFeatures;
     map< string, vector<Ipoint> > surfFeatures;
     
     CvFeatureTree *surfFT;
@@ -64,8 +64,8 @@ public:
 
 
     // load and save classifier configuration
-    virtual bool loadTrainingFile(const char *, std::vector<Trainer> *);
-    virtual bool saveTrainingFile(const char *, std::vector<Trainer> *);
+    //virtual bool loadTrainingFile(const char *, std::vector<Trainer> *);
+    //virtual bool saveTrainingFile(const char *, std::vector<Trainer> *);
 
     // load and save classifier configuration
     virtual bool loadSURFFile(const char *, map<string, vector<Ipoint> > *);
@@ -79,12 +79,12 @@ public:
 
 private:
 
-    FeatureDictionary _features;
-    LogReg *_regressor;
+    //FeatureDictionary _features;
+    //LogReg *_regressor;
 
     // CS221 TO DO: ADD YOUR MEMBER FUNCTIONS HERE
     
-    double maxpool(IplImage *r, const CvRect &pool);
-    double *feature_values(IplImage *dst, TemplateMatcher *tm);
+    //double maxpool(IplImage *r, const CvRect &pool);
+    //double *feature_values(IplImage *dst, TemplateMatcher *tm);
 };
 

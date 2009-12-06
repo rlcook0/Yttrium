@@ -87,6 +87,8 @@ bool Classifier::loadState(const char *filename)
         }
     }
     
+    printf("how many? %d\n", total);
+    
     surfFT = cvCreateKDTree(desc);
     
     return true;
@@ -110,69 +112,69 @@ bool Classifier::saveState(const char *filename)
     return true;
 }
 
-bool Classifier::loadTrainingFile(const char *filename, std::vector<Trainer> *trainers)
-{
-    if (filename == NULL) return false;
+// bool Classifier::loadTrainingFile(const char *filename, std::vector<Trainer> *trainers)
+// {
+    // if (filename == NULL) return false;
     
-    ifstream infile;
-    infile.open(filename);
+    // ifstream infile;
+    // infile.open(filename);
     
-    int vars, count;
+    // int vars, count;
     
-    infile >> count;
-    if (infile.fail() || infile.eof()) return false;
+    // infile >> count;
+    // if (infile.fail() || infile.eof()) return false;
     
-    infile >> vars;
-    if (infile.fail() || infile.eof()) return false;    
+    // infile >> vars;
+    // if (infile.fail() || infile.eof()) return false;    
     
-    for (int i = 0; i < count; i++) 
-    {
+    // for (int i = 0; i < count; i++) 
+    // {
     
-	    infile.ignore(1);
+	    // infile.ignore(1);
 	    
-        Trainer t;
-        infile >> t.truth;
+        // Trainer t;
+        // infile >> t.truth;
      	
-     	t.values = new double[vars + 1];
+     	// t.values = new double[vars + 1];
         
-        for (int j = 0; j <= vars; j ++) 
-        {
-            infile >> t.values[j];
-        }
-        trainers->push_back(t);
-    }
+        // for (int j = 0; j <= vars; j ++) 
+        // {
+            // infile >> t.values[j];
+        // }
+        // trainers->push_back(t);
+    // }
     
-    cout << "Loaded training feature values from: " << filename << endl;
+    // cout << "Loaded training feature values from: " << filename << endl;
     
-    return true;
-}
+    // return true;
+// }
 
 // saveState
 // Writes classifier TrainingFile to the given file
-bool Classifier::saveTrainingFile(const char *filename, std::vector<Trainer> *trainers)
-{
-    if (filename == NULL) return false;
+// bool Classifier::saveTrainingFile(const char *filename, std::vector<Trainer> *trainers)
+// {
+    // if (filename == NULL) return false;
 
-    ofstream outfile;
-    outfile.open(filename); //<= because of bias.
+    // ofstream outfile;
+    // outfile.open(filename); //<= because of bias.
 
-    outfile << trainers->size() << ' ' << _features.numFeatures() << endl;
+    // outfile << trainers->size() << ' ' << _features.numFeatures() << endl;
 
-    for (unsigned i = 0; i < trainers->size(); i++) 
-    {
-        outfile << (*trainers)[i].truth << ' ';
-        for (unsigned j = 0; j <= _features.numFeatures(); j++) 
-        {
-            outfile << (*trainers)[i].values[j] << ' ';
-        }
-        outfile << endl;
-    }
-    outfile.close();
+    // for (unsigned i = 0; i < trainers->size(); i++) 
+    // {
+        // outfile << (*trainers)[i].truth << ' ';
+        // for (unsigned j = 0; j <= _features.numFeatures(); j++) 
+        // {
+            // outfile << (*trainers)[i].values[j] << ' ';
+        // }
+        // outfile << endl;
+    // }
+    // outfile.close();
 
-    cout << "Wrote training feature values from: " << filename << endl;
+    // cout << "Wrote training feature values from: " << filename << endl;
 
-    return true;
-}
+    // return true;
+// }
  
 // saveState
 // Writes classifier TrainingFile to the given file
@@ -188,7 +190,7 @@ bool Classifier::saveSURFFile(const char *filename, map<string, vector<Ipoint> >
     for(map<string, vector<Ipoint> >::iterator it = des->begin(); it != des->end(); ++it)
     {
         outfile << it->second.size() << " " << it->first << endl; 
-        for (unsigned j = 0; j <= des->size(); j++)
+        for (unsigned j = 0; j < it->second.size(); j++)
         {
             Ipoint i = (it->second)[j];
             outfile << i.x << "," << i.y << " " << i.scale << " " << i.orientation << " " << i.laplacian << " ";
@@ -300,14 +302,14 @@ bool Classifier::run(const IplImage *frame, CObjectList *objects, bool scored)
   
   // Do six further resizes, evaluating each time.
   int numLayers = 7;
-  TemplateMatcher tm;
+  //TemplateMatcher tm;
   
   int absBestX = INT_MIN, absBestY = INT_MIN;
   double absBestScore = INT_MIN, absBestScale = scale;
   
   while(numLayers-- > 0) {
     bool skipped = false;
-    tm.loadFrame(dst);
+    //tm.loadFrame(dst);
    
    /*
     // Store feature maps.
@@ -434,43 +436,43 @@ bool Classifier::run(const IplImage *frame, CObjectList *objects, bool scored)
   return true;
 }
 
-double Classifier::maxpool(IplImage *r, const CvRect &pool)
-{
-    float max = -1.0;
+// double Classifier::maxpool(IplImage *r, const CvRect &pool)
+// {
+    // float max = -1.0;
     
-    for (int x = pool.x; x < pool.x + pool.width; x++) {
-        for (int y = pool.y; y < pool.y + pool.height; y++) {
-            float val = CV_IMAGE_ELEM(r, float, y, x);
-            if ( val > max)
-                max = val;
-        }
-    }
+    // for (int x = pool.x; x < pool.x + pool.width; x++) {
+        // for (int y = pool.y; y < pool.y + pool.height; y++) {
+            // float val = CV_IMAGE_ELEM(r, float, y, x);
+            // if ( val > max)
+                // max = val;
+        // }
+    // }
     
-    return max;
-}
+    // return max;
+// }
  
-double *Classifier::feature_values(IplImage *dst, TemplateMatcher *tm)
-{
-    tm->loadFrame(dst);
-    FeatureDefinition *fd = NULL;
+// double *Classifier::feature_values(IplImage *dst, TemplateMatcher *tm)
+// {
+    // tm->loadFrame(dst);
+    // FeatureDefinition *fd = NULL;
     
-    double *values = new double[_features.numFeatures()];
-    for (unsigned i = 0; i < _features.numFeatures(); i++) {
+    // double *values = new double[_features.numFeatures()];
+    // for (unsigned i = 0; i < _features.numFeatures(); i++) {
         
-        fd = _features.getFeature(i);
+        // fd = _features.getFeature(i);
         
-        CvSize newSize = cvSize(dst->width - fd->getTemplateWidth() + 1, dst->height - fd->getTemplateHeight() + 1);
-        IplImage *response = cvCreateImage(newSize, IPL_DEPTH_32F, 1);
+        // CvSize newSize = cvSize(dst->width - fd->getTemplateWidth() + 1, dst->height - fd->getTemplateHeight() + 1);
+        // IplImage *response = cvCreateImage(newSize, IPL_DEPTH_32F, 1);
         
-        tm->makeResponseImage(fd->getTemplate(), response);
-        CvRect valid = fd->getValidRect();
-        values[i] = this->maxpool(response, valid);
+        // tm->makeResponseImage(fd->getTemplate(), response);
+        // CvRect valid = fd->getValidRect();
+        // values[i] = this->maxpool(response, valid);
 
-        cvReleaseImage(&response);
+        // cvReleaseImage(&response);
         
-    }
-    return values; // REMEMBER TO FREE!
-}
+    // }
+    // return values; // REMEMBER TO FREE!
+// }
  
 // train
 // Trains the classifier to recognize the objects given in the
@@ -498,12 +500,12 @@ bool Classifier::train(TTrainingFileList& fileList, const char *trainingFile)
  
     IplImage *image, *smallImage;
     
-    std::vector<Trainer> values;
-    TemplateMatcher tm;
+    //std::vector<Trainer> values;
+    //TemplateMatcher tm;
  
 //    int maxMugs = INT_MAX;
 //    int maxOther = INT_MAX;
-      int maxImages = 1000;
+      int maxImages = INT_MAX;
  
 //    CvMemStorage* storage = cvCreateMemStorage(0);
     
@@ -512,7 +514,8 @@ bool Classifier::train(TTrainingFileList& fileList, const char *trainingFile)
 	    cout << "Processing images..." << endl;
 	    smallImage = cvCreateImage(cvSize(32, 32), IPL_DEPTH_8U, 1);
     
-        for (int i = 0; i < (int)fileList.files.size(); i++) {
+        int minfiles = min(maxImages, (int)fileList.files.size());
+        for (int i = 0; i < minfiles; i++) {
             // show progress
             if (--maxImages < 0) break;
             if (i % 10 == 0) showProgress(i, fileList.files.size());
@@ -537,7 +540,7 @@ bool Classifier::train(TTrainingFileList& fileList, const char *trainingFile)
             //printf("or was it here\n");
             
             // resize to 32 x 32
-            cvResize(image, smallImage);
+            //cvResize(image, smallImage);
         
             //Trainer t;
             //t.values = this->feature_values(smallImage, &tm);
