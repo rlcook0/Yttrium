@@ -37,6 +37,7 @@
 using namespace std;
 
 class Ipoint;
+struct CvFeatureTree;
 
 class Classifier {
 protected:
@@ -46,6 +47,10 @@ protected:
     std::vector<double> mugFeatures;
     map< string, vector<Ipoint> > surfFeatures;
     
+    CvFeatureTree *surfFT;
+    vector< pair<string, int> > surfThresh;
+    
+    string indexToClass(int index);
 public:
     // constructors
     Classifier();
@@ -63,8 +68,8 @@ public:
     virtual bool saveTrainingFile(const char *, std::vector<Trainer> *);
 
     // load and save classifier configuration
-    virtual bool loadSURFFile(const char *, std::vector<Trainer> *);
-    virtual bool saveSURFFile(const char *, std::vector<Trainer> *);
+    virtual bool loadSURFFile(const char *, map<string, vector<Ipoint> > *);
+    virtual bool saveSURFFile(const char *, map<string, vector<Ipoint> > *);
     
     // run the classifier over a single frame
     virtual bool run(const IplImage *, CObjectList *, bool);

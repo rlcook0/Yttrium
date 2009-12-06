@@ -15,15 +15,16 @@
 #include <fstream>
 #include <algorithm>
  
-#include "cv.h"
-#include "cxcore.h"
 #include "highgui.h"
- 
-#include "classifier.h"
-#include "logreg.h"
 
 #include "surf.h"
 #include "surflib.h"
+
+#include "cv.h"
+#include "cxcore.h"
+ 
+#include "classifier.h"
+#include "logreg.h"
 
 // Classifier class ---------------------------------------------------------
  
@@ -33,15 +34,15 @@ Classifier::Classifier()
     // initalize the random number generator (for sample code)
     rng = cvRNG(-1);
  
-    _features.load("dict.xml");
-    _regressor = new LogReg(_features.numFeatures(), double(0.001));
+    //_features.load("dict.xml");
+    //_regressor = new LogReg(_features.numFeatures(), double(0.001));
     
 }
     
 // destructor
 Classifier::~Classifier()
 {
-    delete _regressor;
+    //delete _regressor;
     // CS221 TO DO: free any memory allocated by the object
 }
  
@@ -51,17 +52,42 @@ bool Classifier::loadState(const char *filename)
 {
     assert(filename != NULL);
     
-    ifstream infile;
-    infile.open(filename);
+    //ifstream infile;
+    //infile.open(filename);
     
-    double val;
+    /*double val;
     int i = 0;
     while(!infile.fail() && !infile.eof()) {
         infile >> val;
         if (infile.fail() || infile.eof()) return true;
         
         _regressor->set(i++, val);
+    }*/
+    
+    loadSURFFile(filename, &surfFeatures);
+    
+    int total = 0;
+    for (map<string, vector<Ipoint> >::const_iterator it = surfFeatures.begin(); it != surfFeatures.end(); ++it) {
+        total += it->second.size();
+        surfThresh.push_back(pair<string, int>(it->first, total));
     }
+    
+    CvMat *desc = cvCreateMat(total, 64, CV_32FC1);
+
+    int where = 0;
+    for (map<string, vector<Ipoint> >::const_iterator it = surfFeatures.begin(); it != surfFeatures.end(); ++it) {
+        const vector<Ipoint> *pts = &(it->second);
+        for (unsigned i = 0; i < it->second.size(); ++i) {
+            const Ipoint *ipt = &((*pts)[i]);
+            const float *vals = ipt->descriptor;
+            for (unsigned j = 0; j < 64; ++j) {
+                cvSetReal2D(desc, where, j, vals[j]);
+            }
+            ++where;
+        }
+    }
+    
+    surfFT = cvCreateKDTree(desc);
     
     return true;
 }
@@ -72,12 +98,14 @@ bool Classifier::saveState(const char *filename)
 {
     assert(filename != NULL);
     
-    ofstream outfile;
+    /*ofstream outfile;
     outfile.open(filename); //<= because of bias.
     for (unsigned i = 0; i <= _features.numFeatures(); i++) {
         outfile << _regressor->get(i) << ' ';
     }
-    outfile.close();
+    outfile.close();*/
+    
+    saveSURFFile(filename, &surfFeatures);
     
     return true;
 }
@@ -107,7 +135,6 @@ bool Classifier::loadTrainingFile(const char *filename, std::vector<Trainer> *tr
      	
      	t.values = new double[vars + 1];
         
-        double val;
         for (int j = 0; j <= vars; j ++) 
         {
             infile >> t.values[j];
@@ -156,15 +183,15 @@ bool Classifier::saveSURFFile(const char *filename, map<string, vector<Ipoint> >
     ofstream outfile;
     outfile.open(filename);
     
-    outfile << map->size() << endl;
+    outfile << des->size() << endl;
     
-    for(map<string, vector<Ipoint> >::iterator it = des.begin(); it != des.end(); ++it)
+    for(map<string, vector<Ipoint> >::iterator it = des->begin(); it != des->end(); ++it)
     {
-        outfile << it->second->size() << " " << it->first << endl; 
-        for (unsigned j = 0; j <= des.size(); j++)
+        outfile << it->second.size() << " " << it->first << endl; 
+        for (unsigned j = 0; j <= des->size(); j++)
         {
-            Ipoint i = *(it->second)[j];
-            outfile << i.x << "," << i.y << " " << i.scale << " " i.orientation << " " << i.laplacian << " ";
+            Ipoint i = (it->second)[j];
+            outfile << i.x << "," << i.y << " " << i.scale << " " << i.orientation << " " << i.laplacian << " ";
             for (unsigned k = 0; k < 64; k++)
                 outfile << i.descriptor[k] << " ";
             outfile << endl;
@@ -207,11 +234,11 @@ bool Classifier::loadSURFFile(const char *filename, map<string, vector<Ipoint> >
             Ipoint i;
             infile >> i.x >> i.y >> i.scale >> i.orientation >> i.laplacian;
             for (int k = 0; k < 64; k++) 
-            {   infile >> c; i.descriptor[k] = c; }
-            v->push_back(i);
+            {   infile >> d; i.descriptor[k] = d; }
+            v.push_back(i);
             infile.ignore(1);
         }
-        map[name] = v;
+        (*des)[name] = v;
         infile.ignore(1);
     }
     infile.close();
@@ -221,6 +248,15 @@ bool Classifier::loadSURFFile(const char *filename, map<string, vector<Ipoint> >
     return true;
 }
 
+string Classifier::indexToClass(int index) {
+    for (unsigned i = 0; i < surfThresh.size(); ++i) {
+        if (index < surfThresh[i].second) {
+            return surfThresh[i].first;
+        }
+    }
+    
+    return "ERROR";
+}
 
 // TESTING ONLY
 bool showRect(const IplImage *image, CObject *rect) {
@@ -273,6 +309,7 @@ bool Classifier::run(const IplImage *frame, CObjectList *objects, bool scored)
     bool skipped = false;
     tm.loadFrame(dst);
    
+   /*
     // Store feature maps.
     std::vector<IplImage *> images;
     int maxWidth = INT_MAX, maxHeight = INT_MAX;
@@ -291,11 +328,12 @@ bool Classifier::run(const IplImage *frame, CObjectList *objects, bool scored)
         if (featureMap->width < maxWidth) maxWidth = featureMap->width;
         if (featureMap->height < maxHeight) maxHeight = featureMap->height;
     }
-    
+    */
     // Compute sum of theta(i) x(i).
     int bestX = INT_MIN, bestY = INT_MIN;
     double bestScore = INT_MIN;
     
+    /*
     // TODO: figure out.
     maxWidth = dst->width;
     maxHeight = dst->height;
@@ -320,29 +358,29 @@ bool Classifier::run(const IplImage *frame, CObjectList *objects, bool scored)
                 double value = this->maxpool(featureMap, r); 
                 score += value * _regressor->get(featureNum);
                 
-                /*if (!bad && !skipped) {
-                    CObject obj;
-                    obj.rect = r;
-                    char buffer[50];
-                    sprintf(buffer, "%f", value * _regressor->get(featureNum));
-                    obj.label = buffer;
-                    bool did_skip = showRect(dst, &obj);
-                    if (did_skip) skipped = true;
-                }*/
+                // if (!bad && !skipped) {
+                    // CObject obj;
+                    // obj.rect = r;
+                    // char buffer[50];
+                    // sprintf(buffer, "%f", value * _regressor->get(featureNum));
+                    // obj.label = buffer;
+                    // bool did_skip = showRect(dst, &obj);
+                    // if (did_skip) skipped = true;
+                // }
             }
             
             // Add bias.
             score += _regressor->get(_features.numFeatures());
             
-            /*if (!bad && !skipped) {
-                CObject obj;
-                obj.rect = cvRect(x * scale, y * scale, 32 * scale, 32 * scale);
-                char buffer[50];
-                sprintf(buffer, "%f", score);
-                obj.label = buffer;
-                bool did_skip = showRect(gray, &obj);
-                if (did_skip) skipped = true;
-            }*/
+            // if (!bad && !skipped) {
+                // CObject obj;
+                // obj.rect = cvRect(x * scale, y * scale, 32 * scale, 32 * scale);
+                // char buffer[50];
+                // sprintf(buffer, "%f", score);
+                // obj.label = buffer;
+                // bool did_skip = showRect(gray, &obj);
+                // if (did_skip) skipped = true;
+            // }
             
             //cout << "x: " << x << " y: " << y << " score: " << score << endl;
             if (!bad && score > bestScore) {
@@ -350,11 +388,14 @@ bool Classifier::run(const IplImage *frame, CObjectList *objects, bool scored)
                 bestX = x;
                 bestY = y;
             }
+            
         }
+        
     }
+    */
 
     // Free old images.
-    for (unsigned imageNum = 0; imageNum < images.size(); imageNum ++) {
+    /*for (unsigned imageNum = 0; imageNum < images.size(); imageNum ++) {
         cvReleaseImage(&images[imageNum]);
     }
     
@@ -364,7 +405,7 @@ bool Classifier::run(const IplImage *frame, CObjectList *objects, bool scored)
         absBestY = bestY;
         absBestScale = scale;
     }
-    
+    */
     // Do new resize.
     scale *= 1.2;
     IplImage *old = dst;
@@ -377,7 +418,7 @@ bool Classifier::run(const IplImage *frame, CObjectList *objects, bool scored)
   }
   
   // Logistic regression.
-    double logScore = 1.0 / (1.0 + exp(-1.0 * absBestScore));
+    /*double logScore = 1.0 / (1.0 + exp(-1.0 * absBestScore));
 
     cout << "score: " << absBestScore << " logScore: " << logScore << endl;
 
@@ -387,7 +428,7 @@ bool Classifier::run(const IplImage *frame, CObjectList *objects, bool scored)
         obj.rect = cvRect(absBestX * absBestScale, absBestY * absBestScale, 32 * absBestScale, 32 * absBestScale);
         obj.label = "mug";
         objects->push_back(obj);
-    }
+    }*/
   
   cvReleaseImage(&gray);
   return true;
@@ -462,18 +503,18 @@ bool Classifier::train(TTrainingFileList& fileList, const char *trainingFile)
  
 //    int maxMugs = INT_MAX;
 //    int maxOther = INT_MAX;
+      int maxImages = 1000;
  
 //    CvMemStorage* storage = cvCreateMemStorage(0);
     
-    bool extractVector = !this->loadTrainingFile(trainingFile, &values);
-    
-    if (extractVector) {
+    //bool extractVector = !this->loadTrainingFile(trainingFile, &values);
     
 	    cout << "Processing images..." << endl;
 	    smallImage = cvCreateImage(cvSize(32, 32), IPL_DEPTH_8U, 1);
     
         for (int i = 0; i < (int)fileList.files.size(); i++) {
             // show progress
+            if (--maxImages < 0) break;
             if (i % 10 == 0) showProgress(i, fileList.files.size());
             
             // load the image
@@ -487,18 +528,22 @@ bool Classifier::train(TTrainingFileList& fileList, const char *trainingFile)
             std::vector<Ipoint> pts;
             surfDetDes(image, pts, false);
             
+            //printf("was it here\n");
+            
             for (unsigned j = 0; j < pts.size(); ++j) {
                 surfFeatures[fileList.files[j].label].push_back(pts[j]);
             }
             
+            //printf("or was it here\n");
+            
             // resize to 32 x 32
             cvResize(image, smallImage);
         
-            Trainer t;
-            t.values = this->feature_values(smallImage, &tm);
-            t.truth = (fileList.files[i].label == "mug");
+            //Trainer t;
+            //t.values = this->feature_values(smallImage, &tm);
+            //t.truth = (fileList.files[i].label == "mug");
         
-            values.push_back(t);
+            //values.push_back(t);
         
             // free memory
             cvReleaseImage(&image);
@@ -508,12 +553,11 @@ bool Classifier::train(TTrainingFileList& fileList, const char *trainingFile)
         cvReleaseImage(&smallImage);
         cout << endl;
 
-        this->saveTrainingFile(trainingFile, &values);
-    }
+        //this->saveTrainingFile(trainingFile, &values);
     
     // TRAINING!
     
-    cout << "Training to be a pro! (We need a montage) " << endl << "* * * 80s Music begins playing... * * *" << endl;
+    /*cout << "Training to be a pro! (We need a montage) " << endl << "* * * 80s Music begins playing... * * *" << endl;
     
     double diff = 1;
     for (int e = 0; e < 10000 && diff > 0.0001; e++)
@@ -532,7 +576,7 @@ bool Classifier::train(TTrainingFileList& fileList, const char *trainingFile)
         delete[] values[i].values;
     }
     
-    cout << endl << endl << "I'm ready. Let's DO THIS!" << endl;
+    cout << endl << endl << "I'm ready. Let's DO THIS!" << endl;*/
     
     return true;
 }
