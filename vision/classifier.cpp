@@ -118,18 +118,18 @@ bool Classifier::loadTrainingFile(const char *filename, std::vector<Trainer> *tr
     
     return true;
 }
- 
+
 // saveState
 // Writes classifier TrainingFile to the given file
 bool Classifier::saveTrainingFile(const char *filename, std::vector<Trainer> *trainers)
 {
     if (filename == NULL) return false;
-    
+
     ofstream outfile;
     outfile.open(filename); //<= because of bias.
-    
+
     outfile << trainers->size() << ' ' << _features.numFeatures() << endl;
-    
+
     for (unsigned i = 0; i < trainers->size(); i++) 
     {
         outfile << (*trainers)[i].truth << ' ';
@@ -140,9 +140,86 @@ bool Classifier::saveTrainingFile(const char *filename, std::vector<Trainer> *tr
         outfile << endl;
     }
     outfile.close();
+
+    cout << "Wrote training feature values from: " << filename << endl;
+
+    return true;
+}
+ 
+// saveState
+// Writes classifier TrainingFile to the given file
+bool Classifier::saveSURFFile(const char *filename, map<string, vector<Ipoint> > *des)
+{
+    if (filename == NULL) return false;
+    
+    ofstream outfile;
+    outfile.open(filename);
+    
+    outfile << map->size() << endl;
+    
+    for(map<string, vector<Ipoint> >::iterator it = des.begin(); it != des.end(); ++it)
+    {
+        outfile << it->second->size() << " " << it->first << endl; 
+        for (unsigned j = 0; j <= des.size(); j++)
+        {
+            Ipoint i = *(it->second)[j];
+            outfile << i.x << "," << i.y << " " << i.scale << " " i.orientation << " " << i.laplacian << " ";
+            for (unsigned k = 0; k < 64; k++)
+                outfile << i.descriptor[k] << " ";
+            outfile << endl;
+        }
+        outfile << endl;
+    }
+    outfile.close();
+    
+    cout << "Wrote SURF descriptor values to: " << filename << endl;
+
+    return true;
+}
+
+
+bool Classifier::loadSURFFile(const char *filename, map<string, vector<Ipoint> > *des)
+{
+    if (filename == NULL) return false;
+    
+    ifstream infile;
+    infile.open(filename);
+    
+    int count, ipoints, d;
+    
+    infile >> count;
+    if (infile.fail() || infile.eof()) return false;    
+    infile.ignore(1);
+    
+    for (int c = 0; c < count; c++) 
+    {
+	    
+        string name;
+        infile >> ipoints;
+        infile.ignore(1);        
+        infile >> name; 
+	    infile.ignore(1);
+        
+        vector<Ipoint> v;
+        for (int j = 0; j <= ipoints; j++) 
+        {
+            Ipoint i;
+            infile >> i.x >> i.y >> i.scale >> i.orientation >> i.laplacian;
+            for (int k = 0; k < 64; k++) 
+            {   infile >> c; i.descriptor[k] = c; }
+            v->push_back(i);
+            infile.ignore(1);
+        }
+        map[name] = v;
+        infile.ignore(1);
+    }
+    infile.close();
+    
+    cout << "Loaded SURF descriptor values from: " << filename << endl;
     
     return true;
 }
+
 
 // TESTING ONLY
 bool showRect(const IplImage *image, CObject *rect) {
