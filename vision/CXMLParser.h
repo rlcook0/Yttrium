@@ -16,6 +16,8 @@
 #include <map>
 #include <string>
 
+#include <stdio.h>
+
 class CXMLParam
 {
 public:
