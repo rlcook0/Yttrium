@@ -23,6 +23,7 @@
 #include "logreg.h"
 
 #include "surf.h"
+#include "surflib.h"
 
 // Classifier class ---------------------------------------------------------
  
@@ -382,9 +383,10 @@ bool Classifier::train(TTrainingFileList& fileList, const char *trainingFile)
     std::vector<Trainer> values;
     TemplateMatcher tm;
  
-    int maxMugs = INT_MAX;
-    int maxOther = INT_MAX;
+//    int maxMugs = INT_MAX;
+//    int maxOther = INT_MAX;
  
+//    CvMemStorage* storage = cvCreateMemStorage(0);
     
     bool extractVector = !this->loadTrainingFile(trainingFile, &values);
     
@@ -396,42 +398,33 @@ bool Classifier::train(TTrainingFileList& fileList, const char *trainingFile)
         for (int i = 0; i < (int)fileList.files.size(); i++) {
             // show progress
             if (i % 10 == 0) showProgress(i, fileList.files.size());
- 
-            // skip non-mug and non-other images (milestone only)
-            if ((fileList.files[i].label == "mug") ||
-                (fileList.files[i].label == "other")) {
             
-                // Only use so many of each...
-                if (fileList.files[i].label == "mug") {
-                    if (maxMugs-- < 0) continue;
-                } else if (fileList.files[i].label == "other") {
-                    if (maxOther-- < 0) continue;
-                }
-            
-                // load the image
-                image = cvLoadImage(fileList.files[i].filename.c_str(), 0);
-                if (image == NULL) {
-                    cerr << "ERROR: could not load image " << fileList.files[i].filename.c_str() << endl;
-                    continue;
-                }
-                
-                // AHHH
-                std::vector<Ipoint> pts;
-                Surf surf(image, pts);
-                surf.getDescriptors(false);
-            
-                // resize to 32 x 32
-                cvResize(image, smallImage);
-            
-                Trainer t;
-                t.values = this->feature_values(smallImage, &tm);
-                t.truth = (fileList.files[i].label == "mug");
-            
-                values.push_back(t);
-            
-                // free memory
-                cvReleaseImage(&image);
+            // load the image
+            image = cvLoadImage(fileList.files[i].filename.c_str(), 0);
+            if (image == NULL) {
+                cerr << "ERROR: could not load image " << fileList.files[i].filename.c_str() << endl;
+                continue;
             }
+            
+            // SURF.
+            std::vector<Ipoint> pts;
+            surfDetDes(image, pts, false);
+            
+            for (unsigned j = 0; j < pts.size(); ++j) {
+                surfFeatures[fileList.files[j].label].push_back(pts[j]);
+            }
+            
+            // resize to 32 x 32
+            cvResize(image, smallImage);
+        
+            Trainer t;
+            t.values = this->feature_values(smallImage, &tm);
+            t.truth = (fileList.files[i].label == "mug");
+        
+            values.push_back(t);
+        
+            // free memory
+            cvReleaseImage(&image);
         }
         
         // free memory

@@ -28,7 +28,6 @@
 #include "objects.h"
 #include "featureDictionary.h"
 
-
 #include "logreg.h"
 #include "template.h"
 
@@ -36,13 +35,16 @@
  */
  
 using namespace std;
- 
+
+class Ipoint;
+
 class Classifier {
 protected:
     CvRNG rng;
 
     // CS221 TO DO: ADD YOUR MEMBER VARIABLES HERE
     std::vector<double> mugFeatures;
+    map< string, vector<Ipoint> > surfFeatures;
     
 public:
     // constructors
