@@ -33,7 +33,7 @@ CC = g++
 #OPENCV_LIB_DIR = /afs/ir.stanford.edu/class/cs221/lib64/
 
 OPENSURF = ./OpenSURF
-OPENSURF_LD = $(OPENSURF)/surf.o
+OPENSURF_LD = $(OPENSURF)/surf.o $(OPENSURF)/fasthessian.o $(OPENSURF)/integral.o $(OPENSURF)/ipoint.o $(OPENSURF)/utils.o
 
 CCFLAGS = -Wall $(DEFS) -I$(OPENCV_INC_DIR) -I$(XML_INC_DIR) -I$(OPENSURF)
 LDFLAGS = -L$(OPENCV_LIB_DIR) $(XML_LIB) $(OPENSURF_LD)
