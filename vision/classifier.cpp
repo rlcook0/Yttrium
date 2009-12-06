@@ -69,6 +69,7 @@ bool Classifier::loadState(const char *filename)
     int total = 0;
     for (map<string, vector<Ipoint> >::const_iterator it = surfFeatures.begin(); it != surfFeatures.end(); ++it) {
         total += it->second.size();
+        printf("%s %d\n", it->first.c_str(), total);
         surfThresh.push_back(pair<string, int>(it->first, total));
     }
     
@@ -80,7 +81,8 @@ bool Classifier::loadState(const char *filename)
         for (unsigned i = 0; i < it->second.size(); ++i) {
             const Ipoint *ipt = &((*pts)[i]);
             const float *vals = ipt->descriptor;
-            for (unsigned j = 0; j < 64; ++j) {
+            for (int j = 0; j < 64; ++j) {
+                printf(" (%d %d %f)", where, j, vals[j]);
                 cvSetReal2D(desc, where, j, vals[j]);
             }
             ++where;
@@ -90,6 +92,8 @@ bool Classifier::loadState(const char *filename)
     printf("how many? %d\n", total);
     
     surfFT = cvCreateKDTree(desc);
+    
+    printf("made tree!\n");
     
     return true;
 }
@@ -304,11 +308,11 @@ bool Classifier::run(const IplImage *frame, CObjectList *objects, bool scored)
   int numLayers = 7;
   //TemplateMatcher tm;
   
-  int absBestX = INT_MIN, absBestY = INT_MIN;
-  double absBestScore = INT_MIN, absBestScale = scale;
+  //int absBestX = INT_MIN, absBestY = INT_MIN;
+  //double absBestScore = INT_MIN, absBestScale = scale;
   
   while(numLayers-- > 0) {
-    bool skipped = false;
+    //bool skipped = false;
     //tm.loadFrame(dst);
    
    /*
@@ -332,8 +336,48 @@ bool Classifier::run(const IplImage *frame, CObjectList *objects, bool scored)
     }
     */
     // Compute sum of theta(i) x(i).
-    int bestX = INT_MIN, bestY = INT_MIN;
-    double bestScore = INT_MIN;
+    //int bestX = INT_MIN, bestY = INT_MIN;
+    //double bestScore = INT_MIN;
+    
+    std::vector<Ipoint> pts;
+    surfDetDes(dst, pts, false);
+    
+    CvMat* descriptors = cvCreateMat(pts.size(), 64, CV_32FC1);
+    for (int i = 0; i < (int)pts.size(); ++i) {
+        Ipoint* ipt = &(pts[i]);
+        for (int j = 0; j < 64; ++j) {
+            printf(" (%d %d %f)", i, j, ipt->descriptor[j]);
+            cvSetReal2D(descriptors, i, j, ipt->descriptor[j]);
+        }
+    }
+    
+    printf("%d features\n", (int)pts.size());
+    
+    int k = 5;
+    CvMat *indicies = cvCreateMat(pts.size(), k, CV_32SC1), *distances = cvCreateMat(pts.size(), k, CV_64FC1);
+    cvFindFeatures(surfFT, descriptors, indicies, distances, k);
+    
+    printf("found features\n");
+    
+    // Figure out votes
+    map<string, int> votes;
+    for (int row = 0; row < indicies->rows; ++row) {
+        for (int col = 0; col < indicies->cols; ++col) {
+            int index = cvGetReal2D(indicies, row, col);
+            if (index >= 0) {
+                string type = indexToClass(index);
+                double dist = cvGetReal2D(distances, row, col);
+                printf("%d %f %s\n", index, dist, type.c_str());
+                votes[type] += 1;
+            }
+        }
+    }
+    printf("figured out votes\n");
+    
+    for(map<string, int>::const_iterator it = votes.begin(); it != votes.end(); ++it) {
+        cout << it->first << ": " << it->second;
+        printf("\n");
+    }
     
     /*
     // TODO: figure out.
@@ -504,7 +548,7 @@ bool Classifier::train(TTrainingFileList& fileList, const char *trainingFile)
     //TemplateMatcher tm;
  
 //    int maxMugs = INT_MAX;
-//    int maxOther = INT_MAX;
+    int maxOther = 200;
       int maxImages = INT_MAX;
  
 //    CvMemStorage* storage = cvCreateMemStorage(0);
@@ -517,7 +561,7 @@ bool Classifier::train(TTrainingFileList& fileList, const char *trainingFile)
         int minfiles = min(maxImages, (int)fileList.files.size());
         for (int i = 0; i < minfiles; i++) {
             // show progress
-            if (--maxImages < 0) break;
+            if (fileList.files[i].label == "other" && --maxOther < 0) continue;
             if (i % 10 == 0) showProgress(i, fileList.files.size());
             
             // load the image
@@ -534,7 +578,7 @@ bool Classifier::train(TTrainingFileList& fileList, const char *trainingFile)
             //printf("was it here\n");
             
             for (unsigned j = 0; j < pts.size(); ++j) {
-                surfFeatures[fileList.files[j].label].push_back(pts[j]);
+                surfFeatures[fileList.files[i].label].push_back(pts[j]);
             }
             
             //printf("or was it here\n");
