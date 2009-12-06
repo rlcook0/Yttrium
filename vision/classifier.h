@@ -62,6 +62,10 @@ public:
     virtual bool loadTrainingFile(const char *, std::vector<Trainer> *);
     virtual bool saveTrainingFile(const char *, std::vector<Trainer> *);
 
+    // load and save classifier configuration
+    virtual bool loadSURFFile(const char *, std::vector<Trainer> *);
+    virtual bool saveSURFFile(const char *, std::vector<Trainer> *);
+    
     // run the classifier over a single frame
     virtual bool run(const IplImage *, CObjectList *, bool);
         
