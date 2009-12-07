@@ -727,17 +727,19 @@ bool Classifier::train(TTrainingFileList& fileList, const char *trainingFile)
     
     CvMat *clusters = cvCreateMat(all.size(), 1, CV_32SC1);
     CvMat *centers = cvCreateMat(500, 64, CV_32FC1);
-    cvKMeans2(all_desc, 500, clusters, cvTermCriteria(XXX), 1, 0, 0, centers, 0);
+    cvKMeans2(all_desc, 500, clusters, cvTermCriteria(CV_TERMCRIT_EPS+CV_TERMCRIT_ITER, 10, 1.0), 1, 0, 0, centers, 0);
     
     CvMat *train_data = cvCreateMat(all.size(), 1, CV32SC1);
     CvMat *responses = cvCreateMat(all.size(), 1, CV_CATEGORICAL);
     for (int i = 0; i < (int)all.size(); ++i) {
-        int klass = GETCLASS;
+        int klass = indexToClassInt(i);
         int cluster = cvGetReal1D(clusters, i);
         
         cvSetReal1D(train_data, i, cluster);
         cvSetReal1D(responses, i, klass);
     }
+    
+    bayes.train(train_data, responses);
        
         //this->saveTrainingFile(trainingFile, &values);
     
