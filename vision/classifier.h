@@ -86,5 +86,7 @@ private:
     
     //double maxpool(IplImage *r, const CvRect &pool);
     //double *feature_values(IplImage *dst, TemplateMatcher *tm);
+    
+    bool showRect(const IplImage *, CObject *, const vector<Ipoint> *, const CvMat *, const CvMat *);
 };
 
