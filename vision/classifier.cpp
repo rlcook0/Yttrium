@@ -219,7 +219,7 @@ bool Classifier::loadSURFFile(const char *filename, map<string, vector<Ipoint> >
     ifstream infile;
     infile.open(filename);
     
-    int count, ipoints, d;
+    int count, ipoints;
     
     infile >> count;
     if (infile.fail() || infile.eof()) return false;    
@@ -238,9 +238,10 @@ bool Classifier::loadSURFFile(const char *filename, map<string, vector<Ipoint> >
         for (int j = 0; j <= ipoints; j++) 
         {
             Ipoint i;
-            infile >> i.x >> i.y >> i.scale >> i.orientation >> i.laplacian;
+            char coma;
+            infile >> i.x >> coma >> i.y >> i.scale >> i.orientation >> i.laplacian;
             for (int k = 0; k < 64; k++) 
-            {   infile >> d; i.descriptor[k] = d; }
+            {   infile >> i.descriptor[k]; }
             v.push_back(i);
             infile.ignore(1);
         }
@@ -549,7 +550,7 @@ bool Classifier::train(TTrainingFileList& fileList, const char *trainingFile)
  
 //    int maxMugs = INT_MAX;
     int maxOther = 200;
-      int maxImages = INT_MAX;
+    int maxImages = INT_MAX;
  
 //    CvMemStorage* storage = cvCreateMemStorage(0);
     
