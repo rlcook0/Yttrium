@@ -71,9 +71,7 @@ bool Classifier::loadState(const char *filename)
         total += it->second.size();
         printf("%s %d\n", it->first.c_str(), total);
         surfThresh.push_back(pair<string, int>(it->first, total));
-        surfTotal[it->first] = (int)(it->second.size());
     }
-    surfTotalIpoints = total;
     
     CvMat *desc = cvCreateMat(total, 64, CV_32FC1);
 
@@ -84,7 +82,7 @@ bool Classifier::loadState(const char *filename)
             const Ipoint *ipt = &((*pts)[i]);
             const float *vals = ipt->descriptor;
             for (int j = 0; j < 64; ++j) {
-                //printf(" (%d %d %f)", where, j, vals[j]);
+                printf(" (%d %d %f)", where, j, vals[j]);
                 cvSetReal2D(desc, where, j, vals[j]);
             }
             ++where;
@@ -236,10 +234,8 @@ bool Classifier::loadSURFFile(const char *filename, map<string, vector<Ipoint> >
         infile >> name; 
 	    infile.ignore(1);
         
-        printf("reading %s: %d\n", name.c_str(), ipoints);
-        
         vector<Ipoint> v;
-        for (int j = 0; j < ipoints; j++) 
+        for (int j = 0; j <= ipoints; j++) 
         {
             Ipoint i;
             char coma;
@@ -269,83 +265,34 @@ string Classifier::indexToClass(int index) {
     return "ERROR";
 }
 
+int Classifier::indexToClassInt(int index) {
+    for (unsigned i = 0; i < surfThresh.size(); ++i) {
+        if (index < surfThresh[i].second) {
+            return i + 1;
+        }
+    }
+    
+    return "ERROR";
+}
+
+
 // TESTING ONLY
-bool Classifier::showRect(const IplImage *image, CObject *rect, const vector<Ipoint> *pts = NULL, const CvMat* indicies = NULL, const CvMat *dist = NULL) {
+bool showRect(const IplImage *image, CObject *rect) {
     //char *WINDOW_NAME = "test";
     CvFont font;
 
     cvNamedWindow("test", CV_WINDOW_AUTOSIZE);
     cvInitFont(&font, CV_FONT_VECTOR0, 0.75, 0.75, 0.0f, 1, CV_AA);
     
-    IplImage *frameCopy = cvCreateImage(cvGetSize(image), IPL_DEPTH_8U, 3);
-    cvConvertImage(image, frameCopy);
-    
-    if (pts != NULL) {
-        for (int i = 0; i < (int)pts->size(); ++i) {
-            CvScalar color = CV_RGB(255, 0, 0);
-            if (indicies != NULL && dist != NULL) {
-                
-                int index = cvGetReal2D(indicies, i, 0);
-                string type = indexToClass(index);
-                
-                map<string, double> votes;
-                double totalVotes = 0;
-                for (int col = 0; col < indicies->cols; ++col) {
-                    int index = cvGetReal2D(indicies, i, col);
-                    if (index >= 0) {
-                        string type = indexToClass(index);
-                        double d = cvGetReal2D(dist, i, col);
-                        //printf("%d %f %s\n", index, dist, type.c_str());
-                        
-                        if (d < 0.5) {
-                            votes[type] += 1;
-                            totalVotes += 1;
-                        }
-                    }
-                }
-                //printf("figured out votes\n");
-                
-                string maxLabel = "ERROR";
-                double maxVotes = -1;
-                for(map<string, double>::const_iterator it = votes.begin(); it != votes.end(); ++it) {
-                    //cout << it->first << ": " << (double)it->second / (double)totalVotes << "%";
-                    //printf("\n");
-                    
-                    if (it->second > maxVotes) {
-                        maxLabel = it->first;
-                        maxVotes = it->second;
-                    }
-                }
-                
-                if (maxLabel == "mug") // white
-                    color = CV_RGB(255, 255, 255);
-                else if (maxLabel == "other") // orange
-                    color = CV_RGB(255, 100, 100);
-                else if (maxLabel == "scissors") // blue
-                    color = CV_RGB(100, 100, 255);
-                else if (maxLabel == "stapler") // green
-                    color = CV_RGB(0, 255, 0);
-                else if (maxLabel == "clock") // red
-                    color = CV_RGB(255, 0, 0);
-                else if (maxLabel == "keyboard") // cyan
-                    color = CV_RGB(0, 255, 255);
-            }
-                
-            cvRectangle(frameCopy, cvPoint((*pts)[i].x, (*pts)[i].y), 
-                cvPoint((*pts)[i].x + 3, (*pts)[i].y + 3), color);
-        }
-    }
-    
+    IplImage *frameCopy = cvCloneImage(image);
     rect->draw(frameCopy, CV_RGB(255, 0, 255), &font);
-    
     
     cvShowImage("test", frameCopy);
     cvReleaseImage(&frameCopy);
 
-    return cvWaitKey(100) != -1;
+    return cvWaitKey(50) != -1;
 }
 
-int frameNo = 0;
 // run
 // Runs the classifier over the given frame and returns a list of
 // objects found (and their location).
@@ -355,7 +302,7 @@ int frameNo = 0;
 // results on more frames)
 bool Classifier::run(const IplImage *frame, CObjectList *objects, bool scored)
 {
-  if (!scored)// || ++frameNo < 100)
+  if (!scored)
     return true;
 
   assert((frame != NULL) && (objects != NULL));
@@ -371,8 +318,6 @@ bool Classifier::run(const IplImage *frame, CObjectList *objects, bool scored)
   
   // Do six further resizes, evaluating each time.
   int numLayers = 7;
-  //int numLayers = 1;
-  
   //TemplateMatcher tm;
   
   //int absBestX = INT_MIN, absBestY = INT_MIN;
@@ -407,85 +352,43 @@ bool Classifier::run(const IplImage *frame, CObjectList *objects, bool scored)
     //double bestScore = INT_MIN;
     
     std::vector<Ipoint> pts;
-    surfDetDes(dst, pts, false);//, OCTAVES, INTERVALS, 1, 0.0004f);
+    surfDetDes(dst, pts, false);
     
     CvMat* descriptors = cvCreateMat(pts.size(), 64, CV_32FC1);
     for (int i = 0; i < (int)pts.size(); ++i) {
         Ipoint* ipt = &(pts[i]);
         for (int j = 0; j < 64; ++j) {
-            //printf(" (%d %d %f)", i, j, ipt->descriptor[j]);
+            printf(" (%d %d %f)", i, j, ipt->descriptor[j]);
             cvSetReal2D(descriptors, i, j, ipt->descriptor[j]);
         }
     }
     
-    int k = 50;
+    printf("%d features\n", (int)pts.size());
+    
+    int k = 5;
     CvMat *indicies = cvCreateMat(pts.size(), k, CV_32SC1), *distances = cvCreateMat(pts.size(), k, CV_64FC1);
     cvFindFeatures(surfFT, descriptors, indicies, distances, k);
-// original thresh is 0.0004f
-                       
-    int maxWidth = dst->width;
-    int maxHeight = dst->height;
-    for (int x = 0; x < maxWidth - 32*scale; x += 8) {
-        for (int y = 0; y < maxHeight - 32*scale; y += 8) {
-
-            //printf("setting roi\n");
-            CvRect r = cvRect(x, y, 32 * scale, 32 * scale);
-            //cvSetImageROI(dst, r);
-            
-            //printf("doing surf\n");
-            std::vector<int> newpts;
-            for (int i = 0; i < (int)pts.size(); ++i) {
-                if (pts[i].x >= x && pts[i].x < x + 32*scale && pts[i].y >= y && pts[i].y < y + 32*scale)
-                    newpts.push_back(i);
+    
+    printf("found features\n");
+    
+    // Figure out votes
+    map<string, int> votes;
+    for (int row = 0; row < indicies->rows; ++row) {
+        for (int col = 0; col < indicies->cols; ++col) {
+            int index = cvGetReal2D(indicies, row, col);
+            if (index >= 0) {
+                string type = indexToClass(index);
+                double dist = cvGetReal2D(distances, row, col);
+                printf("%d %f %s\n", index, dist, type.c_str());
+                votes[type] += 1;
             }
-            
-            if (newpts.size() < 5) continue;
-            
-            //printf("found features\n");
-            printf("%d features\n", (int)pts.size());
-            // Figure out votes
-            map<string, double> votes;
-            double totalVotes = 0;
-            for (int row = 0; row < (int)newpts.size(); ++row) {
-                for (int col = 0; col < indicies->cols; ++col) {
-                    int index = cvGetReal2D(indicies, newpts[row], col);
-                    if (index >= 0) {
-                        string type = indexToClass(index);
-                        double dist = cvGetReal2D(distances, newpts[row], col);
-                        //printf("%d %f %s\n", index, dist, type.c_str());
-                        
-                        if (dist < 0.5) {
-                            votes[type] += (0.5 - dist) / 0.5;
-                            totalVotes += (0.5 - dist) / 0.5;
-                        }
-                    }
-                }
-                //printf("\n");
-            }
-            printf("figured out votes\n");
-            
-            string maxLabel = "NONE";
-            double maxVotes = -1;
-            for(map<string, double>::const_iterator it = votes.begin(); it != votes.end(); ++it) {
-                int total = surfTotal[it->first];
-                double proportion = (it->second / (double)total);
-                cout << it->first << ": " << proportion;
-                printf("\n");
-                
-                if (proportion > maxVotes) {// && (double)it->second / (double)totalVotes > 0.1 && it->first != "other") {
-                    maxLabel = it->first;
-                    maxVotes = it->second;
-                }
-            }
-            
-            cvResetImageROI(dst);
-            
-            CObject o;
-            o.rect = r;
-            o.label = maxLabel;
-            
-            showRect(dst, &o, &pts, indicies, distances);
         }
+    }
+    printf("figured out votes\n");
+    
+    for(map<string, int>::const_iterator it = votes.begin(); it != votes.end(); ++it) {
+        cout << it->first << ": " << it->second;
+        printf("\n");
     }
     
     /*
@@ -563,13 +466,13 @@ bool Classifier::run(const IplImage *frame, CObjectList *objects, bool scored)
     */
     // Do new resize.
     scale *= 1.2;
-    // IplImage *old = dst;
+    IplImage *old = dst;
     
-    // CvSize newSize = cvSize(gray->width / scale, gray->height / scale);
-    // dst = cvCreateImage(newSize, gray->depth, gray->nChannels);
-    // cvResize(gray, dst);
+    CvSize newSize = cvSize(gray->width / scale, gray->height / scale);
+    dst = cvCreateImage(newSize, gray->depth, gray->nChannels);
+    cvResize(gray, dst);
     
-    // cvReleaseImage(&old);
+    cvReleaseImage(&old);
   }
   
   // Logistic regression.
@@ -657,9 +560,8 @@ bool Classifier::train(TTrainingFileList& fileList, const char *trainingFile)
     //TemplateMatcher tm;
  
 //    int maxMugs = INT_MAX;
-    int maxOther = 2000;
+    int maxOther = 200;
     int maxImages = INT_MAX;
-    vector<Ipoint> all;
  
 //    CvMemStorage* storage = cvCreateMemStorage(0);
     
@@ -689,7 +591,6 @@ bool Classifier::train(TTrainingFileList& fileList, const char *trainingFile)
             
             for (unsigned j = 0; j < pts.size(); ++j) {
                 surfFeatures[fileList.files[i].label].push_back(pts[j]);
-                all.push_back(pts[j]);
             }
             
             //printf("or was it here\n");
@@ -711,15 +612,6 @@ bool Classifier::train(TTrainingFileList& fileList, const char *trainingFile)
         cvReleaseImage(&smallImage);
         cout << endl;
 
-    int total = 0;
-    for (map<string, vector<Ipoint> >::const_iterator it = surfFeatures.begin(); it != surfFeatures.end(); ++it) {
-        total += it->second.size();
-        printf("%s %d\n", it->first.c_str(), total);
-        surfThresh.push_back(pair<string, int>(it->first, total));
-    } 
-    
-    
-       
         //this->saveTrainingFile(trainingFile, &values);
     
     // TRAINING!
