@@ -718,7 +718,26 @@ bool Classifier::train(TTrainingFileList& fileList, const char *trainingFile)
         surfThresh.push_back(pair<string, int>(it->first, total));
     } 
     
+    CvMat *all_desc = cvCreateMat(all.size(), 64, CV_32FC1);
+    for (int i = 0; i < (int)all.size(); ++i) {
+        for (int j = 0; j < 64; ++j) {
+            cvSetReal2D(all_desc, i, j, all[i].descriptor[j]);
+        }
+    }
     
+    CvMat *clusters = cvCreateMat(all.size(), 1, CV_32SC1);
+    CvMat *centers = cvCreateMat(500, 64, CV_32FC1);
+    cvKMeans2(all_desc, 500, clusters, cvTermCriteria(XXX), 1, 0, 0, centers, 0);
+    
+    CvMat *train_data = cvCreateMat(all.size(), 1, CV32SC1);
+    CvMat *responses = cvCreateMat(all.size(), 1, CV_CATEGORICAL);
+    for (int i = 0; i < (int)all.size(); ++i) {
+        int klass = GETCLASS;
+        int cluster = cvGetReal1D(clusters, i);
+        
+        cvSetReal1D(train_data, i, cluster);
+        cvSetReal1D(responses, i, klass);
+    }
        
         //this->saveTrainingFile(trainingFile, &values);
     
