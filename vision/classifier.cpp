@@ -272,7 +272,7 @@ int Classifier::indexToClassInt(int index) {
         }
     }
     
-    return "ERROR";
+    return 0;
 }
 
 
