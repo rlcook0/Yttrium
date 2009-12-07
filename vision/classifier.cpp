@@ -82,7 +82,7 @@ bool Classifier::loadState(const char *filename)
             const Ipoint *ipt = &((*pts)[i]);
             const float *vals = ipt->descriptor;
             for (int j = 0; j < 64; ++j) {
-                printf(" (%d %d %f)", where, j, vals[j]);
+                //printf(" (%d %d %f)", where, j, vals[j]);
                 cvSetReal2D(desc, where, j, vals[j]);
             }
             ++where;
@@ -234,8 +234,10 @@ bool Classifier::loadSURFFile(const char *filename, map<string, vector<Ipoint> >
         infile >> name; 
 	    infile.ignore(1);
         
+        printf("reading %s: %d\n", name.c_str(), ipoints);
+        
         vector<Ipoint> v;
-        for (int j = 0; j <= ipoints; j++) 
+        for (int j = 0; j < ipoints; j++) 
         {
             Ipoint i;
             char coma;
@@ -306,7 +308,9 @@ bool Classifier::run(const IplImage *frame, CObjectList *objects, bool scored)
   cvResize(gray, dst);
   
   // Do six further resizes, evaluating each time.
-  int numLayers = 7;
+  //int numLayers = 7;
+  int numLayers = 1;
+  
   //TemplateMatcher tm;
   
   //int absBestX = INT_MIN, absBestY = INT_MIN;
@@ -347,14 +351,14 @@ bool Classifier::run(const IplImage *frame, CObjectList *objects, bool scored)
     for (int i = 0; i < (int)pts.size(); ++i) {
         Ipoint* ipt = &(pts[i]);
         for (int j = 0; j < 64; ++j) {
-            printf(" (%d %d %f)", i, j, ipt->descriptor[j]);
+            //printf(" (%d %d %f)", i, j, ipt->descriptor[j]);
             cvSetReal2D(descriptors, i, j, ipt->descriptor[j]);
         }
     }
     
     printf("%d features\n", (int)pts.size());
     
-    int k = 5;
+    int k = 50;
     CvMat *indicies = cvCreateMat(pts.size(), k, CV_32SC1), *distances = cvCreateMat(pts.size(), k, CV_64FC1);
     cvFindFeatures(surfFT, descriptors, indicies, distances, k);
     
@@ -362,21 +366,23 @@ bool Classifier::run(const IplImage *frame, CObjectList *objects, bool scored)
     
     // Figure out votes
     map<string, int> votes;
+    int totalVotes = 0;
     for (int row = 0; row < indicies->rows; ++row) {
         for (int col = 0; col < indicies->cols; ++col) {
             int index = cvGetReal2D(indicies, row, col);
             if (index >= 0) {
                 string type = indexToClass(index);
-                double dist = cvGetReal2D(distances, row, col);
-                printf("%d %f %s\n", index, dist, type.c_str());
+                //double dist = cvGetReal2D(distances, row, col);
+                //printf("%d %f %s\n", index, dist, type.c_str());
                 votes[type] += 1;
+                ++totalVotes;
             }
         }
     }
     printf("figured out votes\n");
     
     for(map<string, int>::const_iterator it = votes.begin(); it != votes.end(); ++it) {
-        cout << it->first << ": " << it->second;
+        cout << it->first << ": " << (double)it->second / (double)totalVotes << "%";
         printf("\n");
     }
     
@@ -601,6 +607,13 @@ bool Classifier::train(TTrainingFileList& fileList, const char *trainingFile)
         cvReleaseImage(&smallImage);
         cout << endl;
 
+    int total = 0;
+    for (map<string, vector<Ipoint> >::const_iterator it = surfFeatures.begin(); it != surfFeatures.end(); ++it) {
+        total += it->second.size();
+        printf("%s %d\n", it->first.c_str(), total);
+        surfThresh.push_back(pair<string, int>(it->first, total));
+    } 
+       
         //this->saveTrainingFile(trainingFile, &values);
     
     // TRAINING!
