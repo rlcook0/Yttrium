@@ -23,6 +23,7 @@
 
 #include "cv.h"
 #include "cxcore.h"
+#include "ml.h"
 
 #include "utils.h"
 #include "objects.h"
@@ -49,9 +50,12 @@ protected:
     
     CvFeatureTree *surfFT;
     vector< pair<string, int> > surfThresh;
+    map<string, int> surfTotal;
+    int surfTotalIpoints;
     
     string indexToClass(int index);
     int indexToClassInt(int index);
+    CvNormalBayesClassifier bayes;
 public:
     // constructors
     Classifier();
@@ -87,5 +91,7 @@ private:
     
     //double maxpool(IplImage *r, const CvRect &pool);
     //double *feature_values(IplImage *dst, TemplateMatcher *tm);
+    
+    bool showRect(const IplImage *, CObject *, const vector<Ipoint> *, const CvMat *, const CvMat *);
 };
 

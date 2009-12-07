@@ -269,6 +269,16 @@ string Classifier::indexToClass(int index) {
     return "ERROR";
 }
 
+int Classifier::indexToClassInt(int index) {
+    for (unsigned i = 0; i < surfThresh.size(); ++i) {
+        if (index < surfThresh[i].second) {
+            return i+1;
+        }
+    }
+    
+    return 0;
+}
+
 // TESTING ONLY
 bool Classifier::showRect(const IplImage *image, CObject *rect, const vector<Ipoint> *pts = NULL, const CvMat* indicies = NULL, const CvMat *dist = NULL) {
     //char *WINDOW_NAME = "test";
@@ -657,7 +667,7 @@ bool Classifier::train(TTrainingFileList& fileList, const char *trainingFile)
     //TemplateMatcher tm;
  
 //    int maxMugs = INT_MAX;
-    int maxOther = 2000;
+    int maxOther = 200;
     int maxImages = INT_MAX;
     vector<Ipoint> all;
  
@@ -727,10 +737,19 @@ bool Classifier::train(TTrainingFileList& fileList, const char *trainingFile)
     
     CvMat *clusters = cvCreateMat(all.size(), 1, CV_32SC1);
     CvMat *centers = cvCreateMat(500, 64, CV_32FC1);
-    cvKMeans2(all_desc, 500, clusters, cvTermCriteria(CV_TERMCRIT_EPS+CV_TERMCRIT_ITER, 10, 1.0), 1, 0, 0, centers, 0);
+    cvKMeans2(all_desc, // samples
+        500, // clusters
+        clusters, // labels
+        cvTermCriteria(CV_TERMCRIT_EPS+CV_TERMCRIT_ITER, 10, 1.0));//, // termcrit
+        /*1, // attempts
+        &rng, //rng
+        0, // flags
+        centers, // centers
+        NULL); // compactness*/
+    //int cvKMeans2(const CvArr* samples, int nclusters, CvArr* labels, CvTermCriteria termcrit, int attempts=1, CvRNG* rng=0, int flags=0, CvArr* centers=0, double* compactness=0)¶
     
-    CvMat *train_data = cvCreateMat(all.size(), 1, CV32SC1);
-    CvMat *responses = cvCreateMat(all.size(), 1, CV_CATEGORICAL);
+    CvMat *train_data = cvCreateMat(all.size(), 1, CV_32SC1);
+    CvMat *responses = cvCreateMat(all.size(), 1, CV_VAR_CATEGORICAL);
     for (int i = 0; i < (int)all.size(); ++i) {
         int klass = indexToClassInt(i);
         int cluster = cvGetReal1D(clusters, i);
