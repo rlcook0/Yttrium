@@ -71,7 +71,9 @@ bool Classifier::loadState(const char *filename)
         total += it->second.size();
         printf("%s %d\n", it->first.c_str(), total);
         surfThresh.push_back(pair<string, int>(it->first, total));
+        surfTotal[it->first] = (int)(it->second.size());
     }
+    surfTotalIpoints = total;
     
     CvMat *desc = cvCreateMat(total, 64, CV_32FC1);
 
@@ -295,7 +297,7 @@ bool Classifier::showRect(const IplImage *image, CObject *rect, const vector<Ipo
                         double d = cvGetReal2D(dist, i, col);
                         //printf("%d %f %s\n", index, dist, type.c_str());
                         
-                        if (d < 0.7) {
+                        if (d < 0.5) {
                             votes[type] += 1;
                             totalVotes += 1;
                         }
@@ -437,7 +439,7 @@ bool Classifier::run(const IplImage *frame, CObjectList *objects, bool scored)
                     newpts.push_back(i);
             }
             
-            if (newpts.size() < 15) continue;
+            if (newpts.size() < 5) continue;
             
             //printf("found features\n");
             printf("%d features\n", (int)pts.size());
@@ -452,9 +454,9 @@ bool Classifier::run(const IplImage *frame, CObjectList *objects, bool scored)
                         double dist = cvGetReal2D(distances, newpts[row], col);
                         //printf("%d %f %s\n", index, dist, type.c_str());
                         
-                        if (dist < 0.7) {
-                            votes[type] += 1;
-                            totalVotes += 1;
+                        if (dist < 0.5) {
+                            votes[type] += (0.5 - dist) / 0.5;
+                            totalVotes += (0.5 - dist) / 0.5;
                         }
                     }
                 }
@@ -462,13 +464,15 @@ bool Classifier::run(const IplImage *frame, CObjectList *objects, bool scored)
             }
             printf("figured out votes\n");
             
-            string maxLabel = "ERROR";
+            string maxLabel = "NONE";
             double maxVotes = -1;
             for(map<string, double>::const_iterator it = votes.begin(); it != votes.end(); ++it) {
-                cout << it->first << ": " << (double)it->second / (double)totalVotes << "%";
+                int total = surfTotal[it->first];
+                double proportion = (it->second / (double)total);
+                cout << it->first << ": " << proportion;
                 printf("\n");
                 
-                if (it->second > maxVotes) {
+                if (proportion > maxVotes) {// && (double)it->second / (double)totalVotes > 0.1 && it->first != "other") {
                     maxLabel = it->first;
                     maxVotes = it->second;
                 }
@@ -655,6 +659,7 @@ bool Classifier::train(TTrainingFileList& fileList, const char *trainingFile)
 //    int maxMugs = INT_MAX;
     int maxOther = 2000;
     int maxImages = INT_MAX;
+    vector<Ipoint> all;
  
 //    CvMemStorage* storage = cvCreateMemStorage(0);
     
@@ -684,6 +689,7 @@ bool Classifier::train(TTrainingFileList& fileList, const char *trainingFile)
             
             for (unsigned j = 0; j < pts.size(); ++j) {
                 surfFeatures[fileList.files[i].label].push_back(pts[j]);
+                all.push_back(pts[j]);
             }
             
             //printf("or was it here\n");
@@ -711,6 +717,8 @@ bool Classifier::train(TTrainingFileList& fileList, const char *trainingFile)
         printf("%s %d\n", it->first.c_str(), total);
         surfThresh.push_back(pair<string, int>(it->first, total));
     } 
+    
+    
        
         //this->saveTrainingFile(trainingFile, &values);
     

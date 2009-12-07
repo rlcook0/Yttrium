@@ -49,6 +49,8 @@ protected:
     
     CvFeatureTree *surfFT;
     vector< pair<string, int> > surfThresh;
+    map<string, int> surfTotal;
+    int surfTotalIpoints;
     
     string indexToClass(int index);
 public:
