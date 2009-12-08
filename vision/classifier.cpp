@@ -298,13 +298,42 @@ string Classifier::indexToClass(int index) {
 }
 
 int Classifier::indexToClassInt(int index) {
-    for (unsigned i = 0; i < surfThresh.size(); ++i) {
-        if (index < surfThresh[i].second) {
-            return i+1;
-        }
-    }
+    string klass = indexToClass(index);
+    return stringToClassInt(klass);
+}
+
+int Classifier::stringToClassInt(string type) {
+    if (type == "other")
+        return kOther;
+    if (type == "mug")
+        return kMug;
+    if (type == "keyboard")
+        return kKeyboard;
+    if (type == "clock")
+        return kClock;
+    if (type == "stapler")
+        return kStapler;
+    if (type == "scissors")
+        return kScissors;
     
-    return 0;
+    return -1;
+}
+
+string Classifier::classIntToString(int type) {
+    if (type == kOther)
+        return "other";
+    if (type == kMug)
+        return "mug";
+    if (type == kKeyboard)
+        return "keyboard";
+    if (type == kClock)
+        return "clock";
+    if (type == kStapler)
+        return "stapler";
+    if (type == kScissors)
+        return "scissors";
+    
+    return "error";
 }
 
 // TESTING ONLY
@@ -446,21 +475,6 @@ bool Classifier::run(const IplImage *frame, CObjectList *objects, bool scored)
     //int bestX = INT_MIN, bestY = INT_MIN;
     //double bestScore = INT_MIN;
     
-    
-    cout << "centers: " << centers << endl;
-    printf("layer=%d\n", numLayers);
-    CvMat *up = cvCreateMat(centers->cols, 1, CV_32FC1);
-    for (int i = 0; i < centers->cols; ++i) {
-        cvSetReal2D(up, i, 0, i);
-    }
-    
-    int a = (int)(CV_MAT_TYPE(centers->type));
-    int b = (int)(CV_32FC1);
-    int c = (int)(CV_IS_MAT(centers));
-    
-    printf("%d %d %d\n", a, b, c);
-    CvKNearest knn(centers, up);
-    
     std::vector<Ipoint> pts;
     surfDetDes(dst, pts, false);//, OCTAVES, INTERVALS, 1, 0.0004f);
     
@@ -480,8 +494,24 @@ bool Classifier::run(const IplImage *frame, CObjectList *objects, bool scored)
 // original thresh is 0.0004f
 
     printf("finding shit\n");
-    CvMat *nearCenter = cvCreateMat(pts.size(), 1, CV_32SC1);
-    knn.find_nearest(descriptors, 1, nearCenter);
+    vector<int> cluster(pts.size());
+    for (int i = 0; i < (int)pts.size(); ++i) {
+        float min_distance = INT_MAX;
+        int min_index = -1;
+        for (int c = 0; c < 500; ++c) {
+            float dist = 0;
+            for (int j = 0; j < 64; ++j) {
+                dist += pow(cvGetReal2D(descriptors, i, j) - cvGetReal2D(centers, c, j), 2);
+            }
+            
+            if (dist < min_distance) {
+                min_index = c;
+                min_distance = dist;
+            }
+        }
+        
+        cluster[i] = min_index;
+    }
                        
     int maxWidth = dst->width;
     int maxHeight = dst->height;
@@ -502,7 +532,7 @@ bool Classifier::run(const IplImage *frame, CObjectList *objects, bool scored)
             if (newpts.size() < 5) continue;
             
             //printf("found features\n");
-            printf("%d features\n", (int)pts.size());
+            //printf("%d features\n", (int)pts.size());
             // Figure out votes
             //map<string, double> votes;
             //double totalVotes = 0;
@@ -526,13 +556,14 @@ bool Classifier::run(const IplImage *frame, CObjectList *objects, bool scored)
             CvMat *query = cvCreateMat(1, 500, CV_32FC1);
             for (int row = 0; row < (int)newpts.size(); ++row) {
                 int idx = newpts[row];
-                int cluster_idx = cvGetReal1D(nearCenter, idx);
+                int cluster_idx = cluster[idx];
 
                 int oldVal = cvGetReal2D(query, 0, cluster_idx);
                 cvSetReal2D(query, 0, cluster_idx, oldVal+1);
             }
             
-            float klass = bayes.predict(query);
+            int klass = bayes.predict(query);
+            printf("it's a %d %s!\n", klass, classIntToString(klass).c_str());
             
             /*
             
@@ -556,9 +587,7 @@ bool Classifier::run(const IplImage *frame, CObjectList *objects, bool scored)
             
             CObject o;
             o.rect = r;
-            char what[50];
-            sprintf(what, "%d", (int)klass);
-            o.label = string(what);
+            o.label = classIntToString(klass);
             
             showRect(dst, &o, &pts, indicies, distances);
         }
@@ -851,7 +880,8 @@ bool Classifier::train(TTrainingFileList& fileList, const char *trainingFile)
     //CvMat *train_data = cvCreateMat(all.size(), 1, CV_32FC1);
     CvMat *responses = cvCreateMat(allImages.size(), 1, CV_32SC1);
     for (int i = 0; i < (int)allImages.size(); ++i) {
-        int klass = indexToClassInt(i);
+        int klass = stringToClassInt(allImages[i].first);
+        printf("%d class is %d %s\n", i, klass, classIntToString(klass).c_str());
         //int cluster = cvGetReal1D(clusters, i);
         
         //cvSetReal1D(train_data, i, cluster);

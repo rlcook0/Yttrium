@@ -34,6 +34,17 @@
 
 /* Classifier class ---------------------------------------------------------
  */
+
+enum ObjectTypes {
+    kMug = 0,
+    kClock,
+    kKeyboard,
+    kOther,
+    kStapler,
+    kScissors,
+    kNumObjects,
+};
+
  
 using namespace std;
 
@@ -55,6 +66,8 @@ protected:
     
     string indexToClass(int index);
     int indexToClassInt(int index);
+    string classIntToString(int type);
+    int stringToClassInt(string type);
     
     CvNormalBayesClassifier bayes;
     CvMat* centers;
