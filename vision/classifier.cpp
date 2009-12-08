@@ -829,7 +829,7 @@ bool Classifier::train(TTrainingFileList& fileList, const char *trainingFile)
     int total = 0;
     for (map<string, vector<Ipoint> >::const_iterator it = surfFeatures.begin(); it != surfFeatures.end(); ++it) {
         total += it->second.size();
-        printf("%s %d\n", it->first.c_str(), total);
+        printf("%s %d\n", it->first.c_str(), (int)it->second.size());
         surfThresh.push_back(pair<string, int>(it->first, total));
     } 
     
@@ -846,14 +846,14 @@ bool Classifier::train(TTrainingFileList& fileList, const char *trainingFile)
     }
     
     printf("kmeans\n");
-    int numClusters = 500;
+    int numClusters = 2000;
     CvMat *clusters = cvCreateMat(total, 1, CV_32SC1);
     centers = cvCreateMat(numClusters, 64, CV_32FC1);
     cvKMeans2(all_desc, // samples
         numClusters, // clusters
         clusters, // labels
-        cvTermCriteria(CV_TERMCRIT_EPS+CV_TERMCRIT_ITER, 10, 1.0));//, // termcrit
-        /*1, // attempts
+        cvTermCriteria(CV_TERMCRIT_EPS+CV_TERMCRIT_ITER, 10, 0.00001), // termcrit
+        1, // attempts
         &rng, //rng
         0, // flags
         centers, // centers
@@ -862,7 +862,7 @@ bool Classifier::train(TTrainingFileList& fileList, const char *trainingFile)
     
     printf("done kmeans\n");
     
-    CvMat *newDesc = cvCreateMat(allImages.size(), 500, CV_32FC1);
+    CvMat *newDesc = cvCreateMat(allImages.size(), numClusters, CV_32FC1);
     cvSet(newDesc, cvRealScalar(0));
     int where = 0;
     for(int i = 0; i < (int)allImages.size(); ++i) {
@@ -881,18 +881,67 @@ bool Classifier::train(TTrainingFileList& fileList, const char *trainingFile)
     CvMat *responses = cvCreateMat(allImages.size(), 1, CV_32SC1);
     for (int i = 0; i < (int)allImages.size(); ++i) {
         int klass = stringToClassInt(allImages[i].first);
-        printf("%d class is %d %s\n", i, klass, classIntToString(klass).c_str());
+        //printf("%d class is %d %s\n", i, klass, classIntToString(klass).c_str());
         //int cluster = cvGetReal1D(clusters, i);
         
         //cvSetReal1D(train_data, i, cluster);
         cvSetReal1D(responses, i, klass);
     }
     
-    printf("test kdtree\n");
-    //cvCreateKDTree(centers);
-    
     printf("training bayes\n");
-    bayes.train(newDesc, responses);
+    for (int i = 0; i < 1; ++i) {
+        bayes.train(newDesc, responses, 0, 0, i > 0);
+    }
+    
+    printf("training svm\n");
+    CvSVM svm;
+    svm.train(newDesc, responses);
+    
+    printf("training knn\n");
+    CvKNearest knn(newDesc, responses);
+    
+    //printf("training dtree\n");
+    //CvDTree dtree;
+    //dtree.train(newDesc, CV_ROW_SAMPLE, responses);
+    
+    printf("testing bayes\n");
+    for (int img = 0; img < (int)allImages.size(); ++img) {
+        vector<Ipoint> pts = allImages[img].second;
+        vector<int> cluster(pts.size());
+        for (int i = 0; i < (int)pts.size(); ++i) {
+            float min_distance = INT_MAX;
+            int min_index = -1;
+            for (int c = 0; c < numClusters; ++c) {
+                float dist = 0;
+                for (int j = 0; j < 64; ++j) {
+                    dist += pow(pts[i].descriptor[j] - cvGetReal2D(centers, c, j), 2);
+                }
+                
+                if (dist < min_distance) {
+                    min_index = c;
+                    min_distance = dist;
+                }
+            }
+            
+            cluster[i] = min_index;
+        }
+        
+        CvMat *query = cvCreateMat(1, numClusters, CV_32FC1);
+        cvSet(query, cvScalar(0));
+        for (int row = 0; row < (int)pts.size(); ++row) {
+            int cluster_idx = cluster[row];
+
+            int oldVal = cvGetReal2D(query, 0, cluster_idx);
+            cvSetReal2D(query, 0, cluster_idx, oldVal+1);
+        }
+        
+        int klass = bayes.predict(query);
+        int klass2 = svm.predict(query);
+        int klass3 = knn.find_nearest(query, 5);
+        printf("%s is a %s (bayes)", allImages[img].first.c_str(), classIntToString(klass).c_str());
+        printf(" %s (svm)!", classIntToString(klass2).c_str());
+        printf(" %s (knn)!\n", classIntToString(klass3).c_str());
+    }
     
     cvSave("centers.dat", centers);
     bayes.save("bayes.dat");

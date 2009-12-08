@@ -36,13 +36,12 @@
  */
 
 enum ObjectTypes {
-    kMug = 0,
-    kClock,
+    kClock = 1,
+    kMug,
     kKeyboard,
     kOther,
     kStapler,
     kScissors,
-    kNumObjects,
 };
 
  
