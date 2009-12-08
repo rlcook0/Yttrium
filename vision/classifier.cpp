@@ -34,6 +34,8 @@ Classifier::Classifier()
     // initalize the random number generator (for sample code)
     rng = cvRNG(-1);
  
+    //centers = NULL;
+ 
     //_features.load("dict.xml");
     //_regressor = new LogReg(_features.numFeatures(), double(0.001));
     
@@ -63,6 +65,20 @@ bool Classifier::loadState(const char *filename)
         
         _regressor->set(i++, val);
     }*/
+    
+    //CvFileStorage* fs = cvOpenFileStorage( "bayes.yml", 0, CV\_STORAGE\_WRITE );
+    
+    bayes.load("bayes.dat");
+    centers = (CvMat *)cvLoad("centers.dat");
+    
+    // CvMat *newC = cvCreateMat(centers->rows, centers->cols, CV_32FC1);
+    // cvCopy(newC, centers);
+    // cvReleaseMat(&centers);
+    // centers = newC;
+    
+    //fprintf("%d %d", centers.
+    
+    cout << "centers: "<<centers << endl;
     
     loadSURFFile(filename, &surfFeatures);
     
@@ -95,7 +111,19 @@ bool Classifier::loadState(const char *filename)
     
     surfFT = cvCreateKDTree(desc);
     
-    printf("made tree!\n");
+    printf("made surf tree!\n");
+    
+    /*for (int i = 0; i < centers->rows; ++i) {
+        for (int j = 0; j < centers->cols; ++j) {
+            printf("%f ", cvGetReal2D(centers, i, j));
+        }
+        printf("\n");
+    }*/
+    
+    //centersFT = cvCreateKDTree(centers);
+    
+    //printf("made centers tree!\n");
+    cout << "centers: " << centers << endl;
     
     return true;
 }
@@ -255,7 +283,7 @@ bool Classifier::loadSURFFile(const char *filename, map<string, vector<Ipoint> >
     infile.close();
     
     cout << "Loaded SURF descriptor values from: " << filename << endl;
-    
+    cout << "centers: " << centers << endl;
     return true;
 }
 
@@ -367,6 +395,8 @@ bool Classifier::run(const IplImage *frame, CObjectList *objects, bool scored)
 {
   if (!scored)// || ++frameNo < 100)
     return true;
+    
+    cout << "centers: " << centers << endl;
 
   assert((frame != NULL) && (objects != NULL));
   
@@ -416,9 +446,25 @@ bool Classifier::run(const IplImage *frame, CObjectList *objects, bool scored)
     //int bestX = INT_MIN, bestY = INT_MIN;
     //double bestScore = INT_MIN;
     
+    
+    cout << "centers: " << centers << endl;
+    printf("layer=%d\n", numLayers);
+    CvMat *up = cvCreateMat(centers->cols, 1, CV_32FC1);
+    for (int i = 0; i < centers->cols; ++i) {
+        cvSetReal2D(up, i, 0, i);
+    }
+    
+    int a = (int)(CV_MAT_TYPE(centers->type));
+    int b = (int)(CV_32FC1);
+    int c = (int)(CV_IS_MAT(centers));
+    
+    printf("%d %d %d\n", a, b, c);
+    CvKNearest knn(centers, up);
+    
     std::vector<Ipoint> pts;
     surfDetDes(dst, pts, false);//, OCTAVES, INTERVALS, 1, 0.0004f);
     
+    printf("found surf points\n");
     CvMat* descriptors = cvCreateMat(pts.size(), 64, CV_32FC1);
     for (int i = 0; i < (int)pts.size(); ++i) {
         Ipoint* ipt = &(pts[i]);
@@ -432,6 +478,10 @@ bool Classifier::run(const IplImage *frame, CObjectList *objects, bool scored)
     CvMat *indicies = cvCreateMat(pts.size(), k, CV_32SC1), *distances = cvCreateMat(pts.size(), k, CV_64FC1);
     cvFindFeatures(surfFT, descriptors, indicies, distances, k);
 // original thresh is 0.0004f
+
+    printf("finding shit\n");
+    CvMat *nearCenter = cvCreateMat(pts.size(), 1, CV_32SC1);
+    knn.find_nearest(descriptors, 1, nearCenter);
                        
     int maxWidth = dst->width;
     int maxHeight = dst->height;
@@ -454,9 +504,9 @@ bool Classifier::run(const IplImage *frame, CObjectList *objects, bool scored)
             //printf("found features\n");
             printf("%d features\n", (int)pts.size());
             // Figure out votes
-            map<string, double> votes;
-            double totalVotes = 0;
-            for (int row = 0; row < (int)newpts.size(); ++row) {
+            //map<string, double> votes;
+            //double totalVotes = 0;
+            /*for (int row = 0; row < (int)newpts.size(); ++row) {
                 for (int col = 0; col < indicies->cols; ++col) {
                     int index = cvGetReal2D(indicies, newpts[row], col);
                     if (index >= 0) {
@@ -471,7 +521,21 @@ bool Classifier::run(const IplImage *frame, CObjectList *objects, bool scored)
                     }
                 }
                 //printf("\n");
+            }*/
+            
+            CvMat *query = cvCreateMat(1, 500, CV_32FC1);
+            for (int row = 0; row < (int)newpts.size(); ++row) {
+                int idx = newpts[row];
+                int cluster_idx = cvGetReal1D(nearCenter, idx);
+
+                int oldVal = cvGetReal2D(query, 0, cluster_idx);
+                cvSetReal2D(query, 0, cluster_idx, oldVal+1);
             }
+            
+            float klass = bayes.predict(query);
+            
+            /*
+            
             printf("figured out votes\n");
             
             string maxLabel = "NONE";
@@ -486,13 +550,15 @@ bool Classifier::run(const IplImage *frame, CObjectList *objects, bool scored)
                     maxLabel = it->first;
                     maxVotes = it->second;
                 }
-            }
+            }*/
             
             cvResetImageROI(dst);
             
             CObject o;
             o.rect = r;
-            o.label = maxLabel;
+            char what[50];
+            sprintf(what, "%d", (int)klass);
+            o.label = string(what);
             
             showRect(dst, &o, &pts, indicies, distances);
         }
@@ -670,11 +736,16 @@ bool Classifier::train(TTrainingFileList& fileList, const char *trainingFile)
     int maxOther = 200;
     int maxImages = INT_MAX;
     vector<Ipoint> all;
+    
+    
+    // (class, <ipt, ipt...>)
+    vector<pair<string, vector<Ipoint> > > allImages;
  
 //    CvMemStorage* storage = cvCreateMemStorage(0);
     
     //bool extractVector = !this->loadTrainingFile(trainingFile, &values);
     
+    printf("starting\n");
 	    cout << "Processing images..." << endl;
 	    smallImage = cvCreateImage(cvSize(32, 32), IPL_DEPTH_8U, 1);
     
@@ -682,8 +753,9 @@ bool Classifier::train(TTrainingFileList& fileList, const char *trainingFile)
         for (int i = 0; i < minfiles; i++) {
             // show progress
             if (fileList.files[i].label == "other" && --maxOther < 0) continue;
-            if (i % 10 == 0) showProgress(i, fileList.files.size());
+            if (i % 10 == 0) showProgress(i, minfiles);
             
+            //printf("loading image\n");
             // load the image
             image = cvLoadImage(fileList.files[i].filename.c_str(), 0);
             if (image == NULL) {
@@ -691,16 +763,20 @@ bool Classifier::train(TTrainingFileList& fileList, const char *trainingFile)
                 continue;
             }
             
+            //printf("surf\n");
             // SURF.
             std::vector<Ipoint> pts;
             surfDetDes(image, pts, false);
             
             //printf("was it here\n");
             
+            //printf("done surf\n");
             for (unsigned j = 0; j < pts.size(); ++j) {
                 surfFeatures[fileList.files[i].label].push_back(pts[j]);
-                all.push_back(pts[j]);
+                //all.push_back(pts[j]);
             }
+            
+            allImages.push_back(pair<string, vector<Ipoint> >(fileList.files[i].label, pts));
             
             //printf("or was it here\n");
             
@@ -728,17 +804,24 @@ bool Classifier::train(TTrainingFileList& fileList, const char *trainingFile)
         surfThresh.push_back(pair<string, int>(it->first, total));
     } 
     
-    CvMat *all_desc = cvCreateMat(all.size(), 64, CV_32FC1);
-    for (int i = 0; i < (int)all.size(); ++i) {
-        for (int j = 0; j < 64; ++j) {
-            cvSetReal2D(all_desc, i, j, all[i].descriptor[j]);
+    printf("setting descriptor\n");
+    CvMat *all_desc = cvCreateMat(total, 64, CV_32FC1);
+    for (int i = 0; i < (int)allImages.size(); ++i) {
+        for (int iptNo = 0; iptNo < (int)allImages[i].second.size(); ++iptNo) {
+            //printf("%d %d\n", i, iptNo);
+            Ipoint *pt = &(allImages[i].second[iptNo]);
+            for (int j = 0; j < 64; ++j) {
+                cvSetReal2D(all_desc, i, j, pt->descriptor[j]);
+            }
         }
     }
     
-    CvMat *clusters = cvCreateMat(all.size(), 1, CV_32SC1);
-    CvMat *centers = cvCreateMat(500, 64, CV_32FC1);
+    printf("kmeans\n");
+    int numClusters = 500;
+    CvMat *clusters = cvCreateMat(total, 1, CV_32SC1);
+    centers = cvCreateMat(numClusters, 64, CV_32FC1);
     cvKMeans2(all_desc, // samples
-        500, // clusters
+        numClusters, // clusters
         clusters, // labels
         cvTermCriteria(CV_TERMCRIT_EPS+CV_TERMCRIT_ITER, 10, 1.0));//, // termcrit
         /*1, // attempts
@@ -748,17 +831,41 @@ bool Classifier::train(TTrainingFileList& fileList, const char *trainingFile)
         NULL); // compactness*/
     //int cvKMeans2(const CvArr* samples, int nclusters, CvArr* labels, CvTermCriteria termcrit, int attempts=1, CvRNG* rng=0, int flags=0, CvArr* centers=0, double* compactness=0)¶
     
-    CvMat *train_data = cvCreateMat(all.size(), 1, CV_32SC1);
-    CvMat *responses = cvCreateMat(all.size(), 1, CV_VAR_CATEGORICAL);
-    for (int i = 0; i < (int)all.size(); ++i) {
+    printf("done kmeans\n");
+    
+    CvMat *newDesc = cvCreateMat(allImages.size(), 500, CV_32FC1);
+    cvSet(newDesc, cvRealScalar(0));
+    int where = 0;
+    for(int i = 0; i < (int)allImages.size(); ++i) {
+        for (int iptNo = 0; iptNo < (int)allImages[i].second.size(); ++iptNo) {
+            int cluster = cvGetReal1D(clusters, where);
+            
+            //printf("(%d %d)\n", i, cluster);
+            int oldVal = cvGetReal2D(newDesc, i, cluster);
+            cvSetReal2D(newDesc, i, cluster, oldVal+1);
+            ++where;
+        }
+    }
+    
+    printf("filling bayes\n");
+    //CvMat *train_data = cvCreateMat(all.size(), 1, CV_32FC1);
+    CvMat *responses = cvCreateMat(allImages.size(), 1, CV_32SC1);
+    for (int i = 0; i < (int)allImages.size(); ++i) {
         int klass = indexToClassInt(i);
-        int cluster = cvGetReal1D(clusters, i);
+        //int cluster = cvGetReal1D(clusters, i);
         
-        cvSetReal1D(train_data, i, cluster);
+        //cvSetReal1D(train_data, i, cluster);
         cvSetReal1D(responses, i, klass);
     }
     
-    bayes.train(train_data, responses);
+    printf("test kdtree\n");
+    //cvCreateKDTree(centers);
+    
+    printf("training bayes\n");
+    bayes.train(newDesc, responses);
+    
+    cvSave("centers.dat", centers);
+    bayes.save("bayes.dat");
        
         //this->saveTrainingFile(trainingFile, &values);
     
