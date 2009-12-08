@@ -6,8 +6,8 @@
 ## ---------------------------------------------------------------------------
 
 # OpenCV library location
-OPENCV_INC_DIR=/afs/ir.stanford.edu/class/cs221/stairvision/external/opencv/include
-OPENCV_LIB_DIR=/afs/ir.stanford.edu/class/cs221/stairvision/external/opencv/lib
+OPENCV_INC_DIR=/afs/ir/users/c/a/cadander/public/opencv/include
+OPENCV_LIB_DIR=/afs/ir/users/c/a/cadander/public/opencv/lib
 
 XML_INC_DIR=/afs/ir.stanford.edu/class/cs221/stairvision/external
 XML_LIB=/afs/ir.stanford.edu/class/cs221/stairvision/external/xmlParser/xmlParser.a
