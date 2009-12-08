@@ -57,10 +57,14 @@ protected:
     // CS221 TO DO: ADD YOUR MEMBER VARIABLES HERE
     //std::vector<double> mugFeatures;
     map< string, vector<Ipoint> > surfFeatures;
+    vector<pair<string, vector<Ipoint> > > allImages;
     
     CvFeatureTree *surfFT, *centersFT;
+    
     vector< pair<string, int> > surfThresh;
     map<string, int> surfTotal;
+    
+    
     int surfTotalIpoints;
     
     string indexToClass(int index);
@@ -69,6 +73,9 @@ protected:
     int stringToClassInt(string type);
     
     CvNormalBayesClassifier bayes;
+    CvKNearest knn;
+    CvSVM svm;
+
     CvMat* centers;
 public:
     // constructors
@@ -81,20 +88,27 @@ public:
     virtual bool loadState(const char *);
     virtual bool saveState(const char *);
 
-
-    // load and save classifier configuration
-    //virtual bool loadTrainingFile(const char *, std::vector<Trainer> *);
-    //virtual bool saveTrainingFile(const char *, std::vector<Trainer> *);
-
-    // load and save classifier configuration
-    virtual bool loadSURFFile(const char *, map<string, vector<Ipoint> > *);
-    virtual bool saveSURFFile(const char *, map<string, vector<Ipoint> > *);
+    // load and save classifier configuration    
+    virtual bool loadSURFFile(const char *);
+    virtual bool saveSURFFile(const char *);
+    
+    virtual bool setupKDTree();
     
     // run the classifier over a single frame
     virtual bool run(const IplImage *, CObjectList *, bool);
+    virtual bool run_boxscan(IplImage *, float , vector<int> &, vector<Ipoint> &, CvMat *, CvMat *);
+    
+    // extract the classifier features
+    virtual bool extract(TTrainingFileList&, const char *);
         
     // train the classifier using given set of files
     virtual bool train(TTrainingFileList&, const char *);
+        
+    virtual bool train_kmeans(CvMat *, int);
+    virtual bool train_bayes(CvMat *, CvMat *);
+    virtual bool train_svm(CvMat *, CvMat *);
+    virtual bool train_knn(CvMat *, CvMat *);
+    virtual bool train_test(int);
 
 private:
 
@@ -106,6 +120,6 @@ private:
     //double maxpool(IplImage *r, const CvRect &pool);
     //double *feature_values(IplImage *dst, TemplateMatcher *tm);
     
-    bool showRect(const IplImage *, CObject *, const vector<Ipoint> *, const CvMat *, const CvMat *);
+    bool showRect(IplImage *, CObject *, const vector<Ipoint> *, const CvMat *, const CvMat *);
 };
 

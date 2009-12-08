@@ -57,8 +57,7 @@ void usage() {
 
 int main(int argc, char *argv[])
 {
-    char *configurationFile;
-    char *trainingFile;
+    char *configurationFile, *trainingFile, *featuresFile;
     bool bVerbose;
     char **args;
     
@@ -68,6 +67,7 @@ int main(int argc, char *argv[])
     configurationFile = NULL;   // set using -c <filename>
     bVerbose = false;           // turn on with -v
     trainingFile = NULL;
+    featuresFile = NULL;
 
     // check arguments
     args = argv + 1;
@@ -79,6 +79,9 @@ int main(int argc, char *argv[])
                 return -1;
             }
             configurationFile = *args;
+        } else if (!strcmp(*args, "-f")) {
+            argc--; args++;
+            featuresFile = *args;
         } else if (!strcmp(*args, "-t")) {
             argc--; args++;
             trainingFile = *args;
@@ -103,7 +106,12 @@ int main(int argc, char *argv[])
     TTrainingFileList fileList;
     fileList = getTrainingFiles(*args, ".jpg");
     
-
+    // now train the classifier
+    if (!classifier.extract(fileList, featuresFile)) {
+        cerr << "ERROR: could not extract features" << endl;
+        exit(-1);
+    }
+    
     // now train the classifier
     if (!classifier.train(fileList, trainingFile)) {
         cerr << "ERROR: could not train classifier" << endl;

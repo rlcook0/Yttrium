@@ -35,6 +35,8 @@ CC = g++
 OPENSURF = ./OpenSURF
 OPENSURF_LD = $(OPENSURF)/surf.o $(OPENSURF)/fasthessian.o $(OPENSURF)/integral.o $(OPENSURF)/ipoint.o $(OPENSURF)/utils.o
 
+CKMEANS = ckmeans.so
+
 CCFLAGS = -Wall $(DEFS) -I$(OPENCV_INC_DIR) -I$(XML_INC_DIR) -I$(OPENSURF)
 LDFLAGS = -L$(OPENCV_LIB_DIR) $(XML_LIB) $(OPENSURF_LD)
 
