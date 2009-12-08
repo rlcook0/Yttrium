@@ -48,14 +48,16 @@ protected:
     //std::vector<double> mugFeatures;
     map< string, vector<Ipoint> > surfFeatures;
     
-    CvFeatureTree *surfFT;
+    CvFeatureTree *surfFT, *centersFT;
     vector< pair<string, int> > surfThresh;
     map<string, int> surfTotal;
     int surfTotalIpoints;
     
     string indexToClass(int index);
     int indexToClassInt(int index);
+    
     CvNormalBayesClassifier bayes;
+    CvMat* centers;
 public:
     // constructors
     Classifier();
