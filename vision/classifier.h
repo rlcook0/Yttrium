@@ -35,6 +35,9 @@
 /* Classifier class ---------------------------------------------------------
  */
 
+#define NUM_CLUSTERS    500
+#define MIN_IPOINTS     5
+ 
 enum ObjectTypes {
     kClock = 1,
     kMug,
@@ -44,7 +47,6 @@ enum ObjectTypes {
     kScissors,
 };
 
- 
 using namespace std;
 
 class Ipoint;
@@ -55,7 +57,6 @@ protected:
     CvRNG rng;
 
     // CS221 TO DO: ADD YOUR MEMBER VARIABLES HERE
-    //std::vector<double> mugFeatures;
     map< string, vector<Ipoint> > surfFeatures;
     vector<pair<string, vector<Ipoint> > > allImages;
     
@@ -96,7 +97,7 @@ public:
     
     // run the classifier over a single frame
     virtual bool run(const IplImage *, CObjectList *, bool);
-    virtual bool run_boxscan(IplImage *, float , vector<int> &, vector<Ipoint> &, CvMat *, CvMat *);
+    virtual bool run_boxscan(IplImage *, vector<int> &, vector<Ipoint> &);
     
     // extract the classifier features
     virtual bool extract(TTrainingFileList&, const char *);
@@ -104,22 +105,14 @@ public:
     // train the classifier using given set of files
     virtual bool train(TTrainingFileList&, const char *);
         
-    virtual bool train_kmeans(CvMat *, int);
+    virtual bool train_kmeans(CvMat *);
     virtual bool train_bayes(CvMat *, CvMat *);
     virtual bool train_svm(CvMat *, CvMat *);
     virtual bool train_knn(CvMat *, CvMat *);
-    virtual bool train_test(int);
+    virtual bool train_test();
 
 private:
-
-    //FeatureDictionary _features;
-    //LogReg *_regressor;
-
-    // CS221 TO DO: ADD YOUR MEMBER FUNCTIONS HERE
     
-    //double maxpool(IplImage *r, const CvRect &pool);
-    //double *feature_values(IplImage *dst, TemplateMatcher *tm);
-    
-    bool showRect(IplImage *, CObject *, const vector<Ipoint> *, const CvMat *, const CvMat *);
+    bool showRect(IplImage *, CObject *, const vector<Ipoint> *);
 };
 

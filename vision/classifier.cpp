@@ -26,7 +26,7 @@
 #include "classifier.h"
 #include "logreg.h"
 
-#define BAYES_ON true
+#define BAYES_ON false
 #define SVM_ON true
 #define KNN_ON false
 
@@ -65,7 +65,6 @@ bool Classifier::loadState(const char *filename)
     if (KNN_ON)   knn.load("knn.dat");
     centers = (CvMat *)cvLoad("centers.dat");
         
-    cout << "centers: "<<centers << endl;
     loadSURFFile(filename);
     setupKDTree();
     
@@ -165,7 +164,6 @@ bool Classifier::loadSURFFile(const char *filename)
     surfTotalIpoints = total;
     printf("how many? %d\n", total);
     
-    cout << "centers: " << centers << endl;
     return true;
 }
 
@@ -189,8 +187,7 @@ bool Classifier::setupKDTree()
     }
     surfFT = cvCreateKDTree(desc);
     printf("made surf tree!\n");
-    cout << "centers: " << centers << endl;
-
+    
     return true;
 }
 
@@ -239,7 +236,7 @@ string Classifier::classIntToString(int type)
 
 
 // TESTING ONLY
-bool Classifier::showRect(IplImage *image, CObject *rect, const vector<Ipoint> *pts = NULL, const CvMat* indicies = NULL, const CvMat *dist = NULL) {
+bool Classifier::showRect(IplImage *image, CObject *rect, const vector<Ipoint> *pts = NULL) {
     //char *WINDOW_NAME = "test";
     CvFont font;
 
@@ -260,7 +257,7 @@ bool Classifier::showRect(IplImage *image, CObject *rect, const vector<Ipoint> *
     
     cvShowImage("test", image);
 
-    return cvWaitKey(100) != -1;
+    return cvWaitKey(10) != -1;
 }
 // run
 // Runs the classifier over the given frame and returns a list of
@@ -271,15 +268,15 @@ bool Classifier::showRect(IplImage *image, CObject *rect, const vector<Ipoint> *
 // results on more frames)
 bool Classifier::run(const IplImage *frame, CObjectList *objects, bool scored)
 {
-    if (!scored)// || ++frameNo < 100)
+    if (!scored)
         return true;
     
     cout << "--------------------------------------" << endl;
     cout << "\t\tRun" << endl;
     
-    cout << "centers: " << centers << endl;
-    
     assert((frame != NULL) && (objects != NULL));
+    
+    printf("Let's go!\n");
     
     // Convert to grayscale.
     IplImage *gray  = cvCreateImage(cvGetSize(frame), IPL_DEPTH_8U, 1);
@@ -293,112 +290,106 @@ bool Classifier::run(const IplImage *frame, CObjectList *objects, bool scored)
     cvResize(gray, dst);
     cvResize(color, dst_color);
 
-    int numLayers = 7;
-
-    while(numLayers-- > 0) 
-    {
-        cout << "Finding layer " << numLayers << endl;
-        
-        std::vector<Ipoint> pts;
-        surfDetDes(dst, pts, false);//, OCTAVES, INTERVALS, 1, 0.0004f);
-
-        CvMat* descriptors = cvCreateMat(pts.size(), 64, CV_32FC1);
-        for (int i = 0; i < (int)pts.size(); ++i) {
-            Ipoint* ipt = &(pts[i]);
-            for (int j = 0; j < 64; ++j) {
-                //printf(" (%d %d %f)", i, j, ipt->descriptor[j]);
-                cvSetReal2D(descriptors, i, j, ipt->descriptor[j]);
-            }
-        }
-
-        int k = 50;
-        CvMat *indicies = cvCreateMat(pts.size(), k, CV_32SC1), *distances = cvCreateMat(pts.size(), k, CV_64FC1);
-        cvFindFeatures(surfFT, descriptors, indicies, distances, k);
-        // original thresh is 0.0004f
-
-        vector<int> cluster(pts.size());
-        for (int i = 0; i < (int)pts.size(); ++i) {
-            float min_distance = INT_MAX;
-            int min_index = -1;
-            for (int c = 0; c < 500; ++c) {
-                float dist = 0;
-                for (int j = 0; j < 64; ++j) {
-                    dist += pow(cvGetReal2D(descriptors, i, j) - cvGetReal2D(centers, c, j), 2);
-                }
-        
-                if (dist < min_distance) {
-                    min_index = c;
-                    min_distance = dist;
-                }
-            }
+    printf("About to do SURF\n");
     
-            cluster[i] = min_index;
+    std::vector<Ipoint> pts;
+    surfDetDes(dst, pts, false);
+    
+    printf("Done SURF\n");
+    
+    CvMat* descriptors = cvCreateMat(pts.size(), 64, CV_32FC1);
+    for (int i = 0; i < (int)pts.size(); ++i) {
+        Ipoint* ipt = &(pts[i]);
+        for (int j = 0; j < 64; ++j) {
+            //printf(" (%d %d %f)", i, j, ipt->descriptor[j]);
+            cvSetReal2D(descriptors, i, j, ipt->descriptor[j]);
         }
-                   
-        
-        run_boxscan(dst_color, scale, cluster, pts, indicies, distances);
-        
-        // Do new resize.
-        scale *= 1.2;
-
     }
 
+    //int k = 5;
+    //CvMat *indicies = cvCreateMat(pts.size(), k, CV_32SC1), *distances = cvCreateMat(pts.size(), k, CV_64FC1);
+    //cvFindFeatures(surfFT, descriptors, indicies, distances, k);
+
+    printf("Clustering...\n");
+    
+    vector<int> cluster(pts.size());
+    for (int i = 0; i < (int)pts.size(); ++i) {
+        float min_distance = INT_MAX;
+        int min_index = -1;
+        for (int c = 0; c < NUM_CLUSTERS; ++c) {
+            float dist = 0;
+            for (int j = 0; j < 64; ++j) {
+                dist += pow(cvGetReal2D(descriptors, i, j) - cvGetReal2D(centers, c, j), 2);
+            }
+    
+            if (dist < min_distance) {
+                min_index = c;
+                min_distance = dist;
+            }
+        }
+
+        cluster[i] = min_index;
+    }
+    
+    printf("Done clustering...\n");
+    
+    run_boxscan(dst_color, cluster, pts);
 
     cvReleaseImage(&gray);
     return true;
 }
 
 
-bool Classifier::run_boxscan(IplImage *dst, float scale, vector<int> &cluster, vector<Ipoint> &pts, CvMat *indicies, CvMat *distances)
+bool Classifier::run_boxscan(IplImage *dst, vector<int> &cluster, vector<Ipoint> &pts)
 {
+    float scale = 2.0f;
     int maxWidth = dst->width;
     int maxHeight = dst->height;
-    for (int x = 0; x < maxWidth - 32*scale; x += 8) {
-        for (int y = 0; y < maxHeight - 32*scale; y += 8) {
+    
+    int numLayers = 7;
+    while(numLayers-- > 0) {
+        for (int x = 0; x < maxWidth - 32*scale; x += 8) {
+            for (int y = 0; y < maxHeight - 32*scale; y += 8) {
+                std::vector<int> newpts;
+                for (int i = 0; i < (int)pts.size(); ++i) {
+                    if (pts[i].x >= x && pts[i].x < x + 32*scale && pts[i].y >= y && pts[i].y < y + 32*scale)
+                        newpts.push_back(i);
+                }
+        
+                if (newpts.size() < MIN_IPOINTS) continue;
+        
+                CvMat *query = cvCreateMat(1, NUM_CLUSTERS, CV_32FC1);
+                for (int row = 0; row < (int)newpts.size(); ++row) {
+                    int idx = newpts[row];
+                    int cluster_idx = cluster[idx];
 
-            //printf("setting roi\n");
-            CvRect r = cvRect(x, y, 32 * scale, 32 * scale);
-            //cvSetImageROI(dst, r);
-    
-            //printf("doing surf\n");
-            std::vector<int> newpts;
-            for (int i = 0; i < (int)pts.size(); ++i) {
-                if (pts[i].x >= x && pts[i].x < x + 32*scale && pts[i].y >= y && pts[i].y < y + 32*scale)
-                    newpts.push_back(i);
+                    int oldVal = cvGetReal2D(query, 0, cluster_idx);
+                    cvSetReal2D(query, 0, cluster_idx, oldVal+1);
+                }
+        
+                int klass, klass2, klass3;
+                
+                if (BAYES_ON) klass = bayes.predict(query);
+                if (SVM_ON)   klass2 = svm.predict(query);
+                if (KNN_ON)   klass3 = knn.find_nearest(query, 5);
+                
+                cout << "I think it's a ";
+                if (BAYES_ON) cout << classIntToString(klass) << "(bayes) ";
+                if (SVM_ON)   cout << classIntToString(klass2) << "(svm) ";
+                if (KNN_ON)   cout << classIntToString(klass3) << "(knn) ";
+                cout << endl;
+                        
+                cvResetImageROI(dst);
+        
+                CObject o;
+                o.rect = cvRect(x, y, 32 * scale, 32 * scale);;
+                o.label = classIntToString(klass);
+        
+                showRect(dst, &o, &pts);
             }
-    
-            if (newpts.size() < 5) continue;
-    
-    
-            CvMat *query = cvCreateMat(1, 500, CV_32FC1);
-            for (int row = 0; row < (int)newpts.size(); ++row) {
-                int idx = newpts[row];
-                int cluster_idx = cluster[idx];
-
-                int oldVal = cvGetReal2D(query, 0, cluster_idx);
-                cvSetReal2D(query, 0, cluster_idx, oldVal+1);
-            }
-    
-            int klass, klass2, klass3;
-            
-            klass = bayes.predict(query);
-            klass2 = svm.predict(query);
-            klass3 = knn.find_nearest(query, 5);
-            
-            cout << "I think it's a ";
-            if (BAYES_ON) cout << classIntToString(klass) << "(bayes) ";
-            if (SVM_ON)   cout << classIntToString(klass2) << "(svm) ";
-            if (KNN_ON)   cout << classIntToString(klass3) << "(knn) ";
-            cout << endl;
-                    
-            cvResetImageROI(dst);
-    
-            CObject o;
-            o.rect = r;
-            o.label = classIntToString(klass);
-    
-            showRect(dst, &o, &pts, indicies, distances);
         }
+        
+        scale *= 1.2;
     }
     return true;
 }
@@ -412,9 +403,7 @@ bool Classifier::train(TTrainingFileList& fileList, const char *trainingFile)
     cout << "------------------------------------------" << endl;
     cout << "\t\tTraining" << endl;
     
-    int numClusters = 500;
-    
-    CvMat *desc = cvCreateMat(allImages.size(), numClusters, CV_32FC1);
+    CvMat *desc = cvCreateMat(allImages.size(), NUM_CLUSTERS, CV_32FC1);
     CvMat *responses = cvCreateMat(allImages.size(), 1, CV_32SC1);
 
     cout << "massaging responses..." << endl;
@@ -424,14 +413,14 @@ bool Classifier::train(TTrainingFileList& fileList, const char *trainingFile)
         cvSetReal1D(responses, i, klass);
     }
     
-    train_kmeans(desc, numClusters);
+    train_kmeans(desc);
     
     
     train_bayes(desc, responses);
     train_svm(desc, responses);
     train_knn(desc, responses);
     
-    train_test(numClusters);
+    train_test();
     
     cvSave("centers.dat", centers);
     if (BAYES_ON) bayes.save("bayes.dat");
@@ -442,7 +431,7 @@ bool Classifier::train(TTrainingFileList& fileList, const char *trainingFile)
 }
 
 
-bool Classifier::train_kmeans(CvMat *desc, int numClusters) 
+bool Classifier::train_kmeans(CvMat *desc) 
 {
     cout << "------------------------------------------" << endl;
     cout << "Step Start: kmeans" << endl;
@@ -466,9 +455,9 @@ bool Classifier::train_kmeans(CvMat *desc, int numClusters)
     cout << "kmeans starting..." << endl;
     
     CvMat *clusters = cvCreateMat(surfTotalIpoints, 1, CV_32SC1);
-    centers = cvCreateMat(numClusters, 64, CV_32FC1);
+    centers = cvCreateMat(NUM_CLUSTERS, 64, CV_32FC1);
     cvKMeans2(all_desc, // samples
-        numClusters, // clusters
+        NUM_CLUSTERS, // clusters
         clusters, // labels
         cvTermCriteria(CV_TERMCRIT_EPS+CV_TERMCRIT_ITER, 10, 0.00001), // termcrit
         1, // attempts
@@ -535,7 +524,7 @@ bool Classifier::train_knn(CvMat *desc, CvMat *responses)
     return true;
 }
 
-bool Classifier::train_test(int numClusters)
+bool Classifier::train_test()
 {
     
     cout << "------------------------------------------" << endl;
@@ -547,7 +536,7 @@ bool Classifier::train_test(int numClusters)
         for (int i = 0; i < (int)pts.size(); ++i) {
             float min_distance = INT_MAX;
             int min_index = -1;
-            for (int c = 0; c < numClusters; ++c) {
+            for (int c = 0; c < NUM_CLUSTERS; ++c) {
                 float dist = 0;
                 for (int j = 0; j < 64; ++j) {
                     dist += pow(pts[i].descriptor[j] - cvGetReal2D(centers, c, j), 2);
@@ -562,7 +551,7 @@ bool Classifier::train_test(int numClusters)
             cluster[i] = min_index;
         }
         
-        CvMat *query = cvCreateMat(1, numClusters, CV_32FC1);
+        CvMat *query = cvCreateMat(1, NUM_CLUSTERS, CV_32FC1);
         cvSet(query, cvScalar(0));
         for (int row = 0; row < (int)pts.size(); ++row) {
             int cluster_idx = cluster[row];
