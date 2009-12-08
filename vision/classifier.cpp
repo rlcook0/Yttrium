@@ -30,7 +30,6 @@
 #define SVM_ON true
 #define KNN_ON false
 
-
 // Classifier class ---------------------------------------------------------
  
 // default constructor
@@ -240,6 +239,9 @@ bool Classifier::showRect(IplImage *image, CObject *rect, const vector<Ipoint> *
     //char *WINDOW_NAME = "test";
     CvFont font;
 
+    IplImage *frameCopy = cvCreateImage(cvGetSize(image), IPL_DEPTH_8U, 3);
+    cvConvertImage(image, frameCopy);
+        
     cvNamedWindow("test", CV_WINDOW_AUTOSIZE);
     cvInitFont(&font, CV_FONT_VECTOR0, 0.75, 0.75, 0.0f, 1, CV_AA);
     
@@ -252,10 +254,11 @@ bool Classifier::showRect(IplImage *image, CObject *rect, const vector<Ipoint> *
         }
     }
     
-    rect->draw(image, CV_RGB(255, 0, 255), &font);
+    rect->draw(frameCopy, CV_RGB(255, 0, 255), &font);
     
     
-    cvShowImage("test", image);
+    cvShowImage("test", frameCopy);
+    cvReleaseImage(&frameCopy);
 
     return cvWaitKey(10) != -1;
 }
@@ -280,15 +283,12 @@ bool Classifier::run(const IplImage *frame, CObjectList *objects, bool scored)
     
     // Convert to grayscale.
     IplImage *gray  = cvCreateImage(cvGetSize(frame), IPL_DEPTH_8U, 1);
-    IplImage *color = cvCreateImage(cvGetSize(frame), IPL_DEPTH_8U, 3);
     cvCvtColor(frame, gray, CV_BGR2GRAY);
     
     // Resize by half first, as per the handout.
     double scale = 2.0;
-    IplImage *dst       = cvCreateImage(cvSize(gray->width  / scale, gray->height  / scale), gray->depth,  gray->nChannels);
-    IplImage *dst_color = cvCreateImage(cvSize(color->width / scale, color->height / scale), color->depth, color->nChannels);
+    IplImage *dst = cvCreateImage(cvSize(gray->width  / scale, gray->height  / scale), gray->depth,  gray->nChannels);
     cvResize(gray, dst);
-    cvResize(color, dst_color);
 
     printf("About to do SURF\n");
     
@@ -297,7 +297,7 @@ bool Classifier::run(const IplImage *frame, CObjectList *objects, bool scored)
     
     printf("Done SURF\n");
     
-    CvMat* descriptors = cvCreateMat(pts.size(), 64, CV_32FC1);
+    /*CvMat* descriptors = cvCreateMat(pts.size(), 64, CV_32FC1);
     for (int i = 0; i < (int)pts.size(); ++i) {
         Ipoint* ipt = &(pts[i]);
         for (int j = 0; j < 64; ++j) {
@@ -305,7 +305,7 @@ bool Classifier::run(const IplImage *frame, CObjectList *objects, bool scored)
             cvSetReal2D(descriptors, i, j, ipt->descriptor[j]);
         }
     }
-
+*/
     //int k = 5;
     //CvMat *indicies = cvCreateMat(pts.size(), k, CV_32SC1), *distances = cvCreateMat(pts.size(), k, CV_64FC1);
     //cvFindFeatures(surfFT, descriptors, indicies, distances, k);
@@ -314,12 +314,12 @@ bool Classifier::run(const IplImage *frame, CObjectList *objects, bool scored)
     
     vector<int> cluster(pts.size());
     for (int i = 0; i < (int)pts.size(); ++i) {
-        float min_distance = INT_MAX;
+        double min_distance = DBL_MAX;
         int min_index = -1;
         for (int c = 0; c < NUM_CLUSTERS; ++c) {
             float dist = 0;
             for (int j = 0; j < 64; ++j) {
-                dist += pow(cvGetReal2D(descriptors, i, j) - cvGetReal2D(centers, c, j), 2);
+                dist += pow(pts[i].descriptor[j] - cvGetReal2D(centers, c, j), 2);
             }
     
             if (dist < min_distance) {
@@ -331,9 +331,15 @@ bool Classifier::run(const IplImage *frame, CObjectList *objects, bool scored)
         cluster[i] = min_index;
     }
     
+    /*printf("cluster\n");
+    for (int i = 0; i < (int)pts.size(); i++) {
+        printf("%d ", cluster[i]);
+    }
+    printf("\n");*/
+    
     printf("Done clustering...\n");
     
-    run_boxscan(dst_color, cluster, pts);
+    run_boxscan(dst, cluster, pts);
 
     cvReleaseImage(&gray);
     return true;
@@ -359,13 +365,22 @@ bool Classifier::run_boxscan(IplImage *dst, vector<int> &cluster, vector<Ipoint>
                 if (newpts.size() < MIN_IPOINTS) continue;
         
                 CvMat *query = cvCreateMat(1, NUM_CLUSTERS, CV_32FC1);
+                cvSet(query, cvScalar(0));
                 for (int row = 0; row < (int)newpts.size(); ++row) {
                     int idx = newpts[row];
                     int cluster_idx = cluster[idx];
 
                     int oldVal = cvGetReal2D(query, 0, cluster_idx);
                     cvSetReal2D(query, 0, cluster_idx, oldVal+1);
+                    
+                    
                 }
+                
+                // printf("\n");
+                // for (int i = 0; i < NUM_CLUSTERS; i++) {
+                    // printf("%d ", (int)cvGetReal2D(query, 0, i));
+                // }
+                // printf("\n");
         
                 int klass, klass2, klass3;
                 
@@ -383,7 +398,7 @@ bool Classifier::run_boxscan(IplImage *dst, vector<int> &cluster, vector<Ipoint>
         
                 CObject o;
                 o.rect = cvRect(x, y, 32 * scale, 32 * scale);;
-                o.label = classIntToString(klass);
+                o.label = classIntToString(klass2);
         
                 showRect(dst, &o, &pts);
             }
@@ -459,7 +474,7 @@ bool Classifier::train_kmeans(CvMat *desc)
     cvKMeans2(all_desc, // samples
         NUM_CLUSTERS, // clusters
         clusters, // labels
-        cvTermCriteria(CV_TERMCRIT_EPS+CV_TERMCRIT_ITER, 10, 0.00001), // termcrit
+        cvTermCriteria(CV_TERMCRIT_EPS+CV_TERMCRIT_ITER, 10, 0.1), // termcrit
         1, // attempts
         &rng, //rng
         0, // flags
