@@ -27,14 +27,14 @@
 #include "logreg.h"
 
 #define BAYES_ON false
-#define SVM_ON false
-#define KNN_ON true
+#define SVM_ON true
+#define KNN_ON false
 #define RTREE_ON false
 
 #define LOAD_KMEANS true
 #define SAVE_KMEANS true
 #define LOAD_IPOINTS false
-#define SAVE_IPOINTS false
+#define SAVE_IPOINTS true
 
 // Classifier class ---------------------------------------------------------
  
@@ -82,7 +82,7 @@ bool Classifier::saveState(const char *filename)
 {
     assert(filename != NULL);
     
-    saveSURFFile(filename);
+    //saveSURFFile(filename);
     
     return true;
 }
