@@ -35,16 +35,17 @@
 /* Classifier class ---------------------------------------------------------
  */
 
-#define NUM_CLUSTERS    100
+#define NUM_CLUSTERS    500
 #define MIN_IPOINTS     10
  
 enum ObjectTypes {
-    kClock = 1,
+    kClock = 0,
     kMug,
     kKeyboard,
     kOther,
     kStapler,
     kScissors,
+    kNumObjectTypes
 };
 
 using namespace std;
@@ -112,7 +113,7 @@ public:
     virtual bool train_bayes(CvMat *, CvMat *);
     virtual bool train_svm(CvMat *, CvMat *);
     virtual bool train_knn(CvMat *, CvMat *);
-    virtual bool train_test();
+    virtual bool train_test(vector<pair<string, vector<Ipoint> > > *data);
     virtual bool train_rtree(CvMat *, CvMat *);
     virtual bool train_mugtree(CvMat *, CvMat *);
 
