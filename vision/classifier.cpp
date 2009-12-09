@@ -590,7 +590,7 @@ bool Classifier::train_kmeans(CvMat *desc)
         0,              // flags
         centers,        // centers
         NULL            // compactness
-    };
+    );
     
     cout << "creating new descriptors..." << endl;
     
