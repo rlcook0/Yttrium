@@ -107,12 +107,6 @@ int main(int argc, char *argv[])
     fileList = getTrainingFiles(*args, ".jpg");
     
     // now train the classifier
-    if (!classifier.extract(fileList, featuresFile)) {
-        cerr << "ERROR: could not extract features" << endl;
-        exit(-1);
-    }
-    
-    // now train the classifier
     if (!classifier.train(fileList, trainingFile)) {
         cerr << "ERROR: could not train classifier" << endl;
         exit(-1);

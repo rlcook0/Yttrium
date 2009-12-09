@@ -76,6 +76,7 @@ protected:
     CvNormalBayesClassifier bayes;
     CvKNearest knn;
     CvSVM svm;
+    CvRTrees rtree;
 
     CvMat* centers;
 public:
@@ -110,6 +111,7 @@ public:
     virtual bool train_svm(CvMat *, CvMat *);
     virtual bool train_knn(CvMat *, CvMat *);
     virtual bool train_test();
+    virtual bool train_rtree(CvMat *, CvMat *);
 
 private:
     
