@@ -14,6 +14,8 @@
 #include <iostream>
 #include <fstream>
 #include <algorithm>
+
+#include <sys/stat.h>
  
 #include "highgui.h"
 
@@ -27,13 +29,14 @@
 #include "logreg.h"
 
 #define BAYES_ON false
-#define SVM_ON true
+#define SVM_ON false
 #define KNN_ON false
-#define RTREE_ON false
+#define RTREE_ON true
+#define MUGTREE_ON false
 
-#define LOAD_KMEANS true
+#define LOAD_KMEANS false
 #define SAVE_KMEANS true
-#define LOAD_IPOINTS false
+#define LOAD_IPOINTS true
 #define SAVE_IPOINTS true
 
 // Classifier class ---------------------------------------------------------
@@ -426,6 +429,21 @@ bool Classifier::run_boxscan(IplImage *dst, vector<int> &cluster, vector<Ipoint>
     return true;
 }
 
+bool FileExists(string strFilename) {
+  struct stat stFileInfo;
+  bool blnReturn;
+  int intStat;
+
+  // Attempt to get the file attributes
+  intStat = stat(strFilename.c_str(),&stFileInfo);
+  if(intStat == 0) {
+    blnReturn = true;
+  } else {
+    blnReturn = false;
+  }
+  
+  return(blnReturn);
+}
  
 // train
 // Trains the classifier to recognize the objects given in the
@@ -435,13 +453,13 @@ bool Classifier::train(TTrainingFileList& fileList, const char *trainingFile)
     cout << "------------------------------------------" << endl;
     cout << "\t\tTraining" << endl;
 
-    if (!LOAD_IPOINTS) {
+    if (!LOAD_IPOINTS || !FileExists("/tmp/surf/num_images")) {
         extract(fileList, trainingFile);
     } else {
         int numImages;
         
         ifstream num;
-        num.open("surf/num_images");
+        num.open("/tmp/surf/num_images");
         num >> numImages;
         num.close();
         
@@ -451,8 +469,8 @@ bool Classifier::train(TTrainingFileList& fileList, const char *trainingFile)
         for (int i = 0; i < numImages; ++i) {
             showProgress(i, numImages);
             char klassfn[50], datfn[50];
-            sprintf(klassfn, "surf/img%d.klass", i);
-            sprintf(datfn, "surf/img%d.dat", i);
+            sprintf(klassfn, "/tmp/surf/img%d.klass", i);
+            sprintf(datfn, "/tmp/surf/img%d.dat", i);
             
             string klass;
             
@@ -478,8 +496,8 @@ bool Classifier::train(TTrainingFileList& fileList, const char *trainingFile)
             showProgress(i, (int)allImages.size());
             
             char klassfn[50], datfn[50];
-            sprintf(klassfn, "surf/img%d.klass", i);
-            sprintf(datfn, "surf/img%d.dat", i);
+            sprintf(klassfn, "/tmp/surf/img%d.klass", i);
+            sprintf(datfn, "/tmp/surf/img%d.dat", i);
             
             saveSurf(datfn, allImages[i].second);
             
@@ -490,17 +508,34 @@ bool Classifier::train(TTrainingFileList& fileList, const char *trainingFile)
         }
         
         ofstream num;
-        num.open("surf/num_images");
+        num.open("/tmp/surf/num_images");
         num << (int)allImages.size();
         num.close();
         printf("Done!\n");
     }
-        
+    
+    // make folds
+    vector<int> indexes;
+    for (int i = 0; i < (int)allImages.size(); ++i) indexes.push_back(i);
+    random_shuffle ( indexes.begin(), indexes.end() );
+    
+    int size = (int)((double)allImages.size() * 0.7);
+    trainSet = new vector<pair<string, vector<Ipoint> > >(size);
+    testSet = new vector<pair<string, vector<Ipoint> > >((int)allImages.size() - size);
+    
+    for (int i = 0; i < (int)allImages.size(); ++i) {
+        if (i < size)
+            trainSet->push_back(allImages[i]);
+        else
+            testSet->push_back(allImages[i]);
+    }
+    
+    // testSet = trainSet = &allImages;
     
     CvMat *desc, *responses;
-    if(!LOAD_KMEANS) {
-        desc = cvCreateMat(allImages.size(), NUM_CLUSTERS, CV_32FC1);
-        responses = cvCreateMat(allImages.size(), 1, CV_32SC1);
+    if(!LOAD_KMEANS || !FileExists("desc.dat")) {
+        desc = cvCreateMat(trainSet->size(), NUM_CLUSTERS, CV_32FC1);
+        responses = cvCreateMat(trainSet->size(), 1, CV_32SC1);
 
         cout << "massaging responses..." << endl;
         for (int i = 0; i < (int)allImages.size(); ++i) 
@@ -530,6 +565,7 @@ bool Classifier::train(TTrainingFileList& fileList, const char *trainingFile)
     train_svm(desc, responses);
     train_knn(desc, responses);
     train_rtree(desc, responses);
+    train_mugtree(desc, responses);
     
     /*printf("Saving classifiers...");
     if (BAYES_ON) bayes.save("bayes.dat");
@@ -551,13 +587,17 @@ bool Classifier::train_kmeans(CvMat *desc)
     
     cout << "setting first descriptors..." << endl;
     
+    int trainIpoints = 0;
+    for (int i = 0; i < (int)trainSet->size(); ++i) {
+        trainIpoints += (*trainSet)[i].second.size();
+    }
     
-    CvMat *all_desc = cvCreateMat(surfTotalIpoints, 64, CV_32FC1);
+    CvMat *all_desc = cvCreateMat(trainIpoints, 64, CV_32FC1);
     int where = 0;
     for (int i = 0; i < (int)allImages.size(); ++i) {
-        for (int iptNo = 0; iptNo < (int)allImages[i].second.size(); ++iptNo) {
+        for (int iptNo = 0; iptNo < (int)(*trainSet)[i].second.size(); ++iptNo) {
             //printf("%d %d\n", i, iptNo);
-            Ipoint *pt = &(allImages[i].second[iptNo]);
+            Ipoint *pt = &((*trainSet)[i].second[iptNo]);
             for (int j = 0; j < 64; ++j) {
                 cvSetReal2D(all_desc, where, j, pt->descriptor[j]);
             }
@@ -567,7 +607,7 @@ bool Classifier::train_kmeans(CvMat *desc)
     
     cout << "kmeans starting..." << endl;
     
-    CvMat *clusters = cvCreateMat(surfTotalIpoints, 1, CV_32SC1);
+    CvMat *clusters = cvCreateMat(trainIpoints, 1, CV_32SC1);
     centers = cvCreateMat(NUM_CLUSTERS, 64, CV_32FC1);
     cvKMeans2(all_desc, // samples
         NUM_CLUSTERS, // clusters
@@ -585,8 +625,8 @@ bool Classifier::train_kmeans(CvMat *desc)
     
     cvSet(desc, cvRealScalar(0));
     where = 0;
-    for(int i = 0; i < (int)allImages.size(); ++i) {
-        for (int iptNo = 0; iptNo < (int)allImages[i].second.size(); ++iptNo) {
+    for(int i = 0; i < (int)(*trainSet).size(); ++i) {
+        for (int iptNo = 0; iptNo < (int)(*trainSet)[i].second.size(); ++iptNo) {
             int cluster = cvGetReal1D(clusters, where);
             
             //printf("(%d %d)\n", i, cluster);
@@ -656,30 +696,128 @@ bool Classifier::train_rtree(CvMat *desc, CvMat *responses)
     cout << "------------------------------------------" << endl;
     cout << "Step Start: rtree" << endl; 
     
-    if (RTREE_ON) rtree.train(desc, CV_ROW_SAMPLE, responses);
+    CvRTParams params( 
+        20,                                 //Max depth 
+        5,                                  //Min sample count 
+        0,                                  //Regression accuracy 
+        false,                              //Use Surrogates 
+        15,                                 //Max Categories 
+        NULL,                               //Priors  
+        false,                              //Calculate Variables variance 
+        0,                                  //Nactive Vars 
+        50,                                 //Max Tree Count 
+        0.1,                                //Accuracy to archive 
+        CV_TERMCRIT_EPS+CV_TERMCRIT_ITER    //Criteria to stop algorithm 
+    );
+    
+    printf("%d %d\n", NUM_CLUSTERS, desc->cols);
+    assert(NUM_CLUSTERS == desc->cols);
+    
+    CvMat *var_type = cvCreateMat(desc->cols + 1, 1, CV_8U);
+    cvSet(var_type, cvScalarAll(CV_VAR_NUMERICAL));
+    cvSet2D(var_type, desc->cols, 0, cvScalar(CV_VAR_CATEGORICAL));
+    
+    if (RTREE_ON) rtree.train(
+        desc, 
+        CV_ROW_SAMPLE,
+        responses,
+        0,
+        0,
+        var_type,
+        0,
+        params
+    );
     else cout << "RTREE is turned off" << endl;
     
     cout << "Step Done:  rtree" << endl;
     return true;
 }
 
+bool Classifier::train_mugtree(CvMat *desc, CvMat *responses) 
+{
+    cout << "------------------------------------------" << endl;
+    cout << "Step Start: mugtree" << endl; 
+    
+    CvMat *new_responses = cvCreateMat(responses->rows, 1, CV_32SC1);
+    for (int i = 0; i < responses->rows; ++i) {
+        int klass = cvGetReal2D(responses, i, 0);
+        int newKlass = klass == kMug ? kMug : kOther;
+        
+        cvSetReal2D(new_responses, i, 0, newKlass);
+    }
+    
+    CvMat* var_type = cvCreateMat( desc->cols + 1, 1, CV_8U );
+    cvSet( var_type, cvScalarAll(CV_VAR_ORDERED) );
+    cvSetReal1D( var_type, desc->cols, CV_VAR_CATEGORICAL );    
+    
+    if (MUGTREE_ON) mugTree.train(
+        desc, 
+        CV_ROW_SAMPLE, 
+        new_responses,
+        0,
+        0,
+        0,
+        0,
+        CvBoostParams( CvBoost::REAL, 100, 0.95, 5, false, 0 )
+    );
+    else cout << "MUGTREE is turned off" << endl;
+    
+    cout << "Step Done:  mugtree" << endl;
+    return true;
+}
+
+
+void logResult(int *data, int klass, int trueClass) {
+    if (klass != kOther) // positive
+        if (klass == trueClass) // true
+            data[0] += 1; //tp
+        else
+            data[2] += 1; //fn
+    else // negative
+        if (klass == trueClass) //true
+            data[1] += 1; //tn
+        else
+            data[3] += 1; //fp
+}
+
+void logResult(int *data, int klass, int trueClass, int targetClass) {
+    if (trueClass == targetClass)
+        if (klass == trueClass)
+            data[0] += 1;
+        else
+            data[2] += 1;
+    else
+        if (klass == trueClass)
+            data[1] += 1;
+        else
+            data[3] += 1;
+}
+
+void printResult(int *data, string name) {
+    double accuracy = (double)(data[0] + data[1]) / (double)(data[0] + data[1] + data[2] + data[3]); 
+    double precision = (double)data[0] / (double)(data[0] + data[2]);
+    double recall = (double)data[0] / (double)(data[0] + data[3]);
+    double fscore = 2 * (precision * recall) / (precision + recall);
+    
+    printf("%s\ttp: %d\tfp: %d\ttn: %d\tfn: %d\n", name.c_str(), data[0], data[1], data[2], data[3]);
+    printf("%s\taccuracy: %f\tprecision: %f\trecall: %f\tfscore: %f\n", name.c_str(), accuracy, precision, recall, fscore);
+}
 
 bool Classifier::train_test()
 {
-    
     cout << "------------------------------------------" << endl;
     cout << "Step Start: test" << endl;
     
-    int bayes_results[4], svm_results[4], knn_results[4], rtree_results[4];
+    int bayes_results[4], svm_results[4], knn_results[4], rtree_results[4], mugtree_results[4];
     for (int i = 0; i < 4; ++i)
-        bayes_results[i] = svm_results[i] = knn_results[i] = rtree_results[0] = 0;
+        bayes_results[i] = svm_results[i] = knn_results[i] = rtree_results[i] = mugtree_results[i] = 0;
     
 
-    cout << "Running " << (int)allImages.size() << " images." << endl;
-    for (int img = 0; img < (int)allImages.size(); ++img) {
-        showProgress(img, (int)allImages.size());
+    cout << "Running " << (int)(*testSet).size() << " images." << endl;
+    for (int img = 0; img < (int)(*testSet).size(); ++img) {
+        showProgress(img, (int)(*testSet).size());
         
-        vector<Ipoint> pts = allImages[img].second;
+        vector<Ipoint> pts = (*testSet)[img].second;
         vector<int> cluster(pts.size());
         for (int i = 0; i < (int)pts.size(); ++i) {
             float min_distance = INT_MAX;
@@ -717,67 +855,26 @@ bool Classifier::train_test()
         CvMat *normalized = normalize(query);
         query = normalized;
         
-        int trueClass = stringToClassInt(allImages[img].first);
+        int trueClass = stringToClassInt((*testSet)[img].first);
         
-        int klass, klass2, klass3, klass4;
+        int klass, klass2, klass3, klass4, klass5;
         if (BAYES_ON) klass = bayes.predict(query);
         if (SVM_ON) klass2 = svm.predict(query);
         if (KNN_ON) klass3 = knn.find_nearest(query, 5);
         if (RTREE_ON) klass4 = rtree.predict(query);
+        if (MUGTREE_ON) klass5 = mugTree.predict(query);
         
         // tp, fp, tn, fn
         
-        if (BAYES_ON) {
-            if (klass == trueClass)
-                if (klass != kOther)
-                    bayes_results[0] += 1;
-                else
-                    bayes_results[2] += 1;
-            else
-                if (klass != kOther)
-                    bayes_results[1] += 1;
-                else
-                    bayes_results[3] += 1;
-        } 
-        if (SVM_ON) {
-            if (klass2 == trueClass)
-                if (klass2 != kOther)
-                    svm_results[0] += 1;
-                else
-                    svm_results[2] += 1;
-            else
-                if (klass2 != kOther)
-                    svm_results[1] += 1;
-                else
-                    svm_results[3] += 1;
-        } 
-        if (KNN_ON) {
-            if (klass3 == trueClass)
-                if (klass3 != kOther)
-                    knn_results[0] += 1;
-                else
-                    knn_results[2] += 1;
-            else
-                if (klass3 != kOther)
-                    knn_results[1] += 1;
-                else
-                    knn_results[3] += 1;
-        } 
-        if (RTREE_ON) {
-            if (klass4 == trueClass)
-                if (klass4 != kOther)
-                    rtree_results[0] += 1;
-                else
-                    rtree_results[2] += 1;
-            else
-                if (klass4 != kOther)
-                    rtree_results[1] += 1;
-                else
-                    rtree_results[3] += 1;
-        } 
+        if (BAYES_ON) logResult(bayes_results, klass, trueClass);
+        if (SVM_ON) logResult(svm_results, klass2, trueClass);
+        if (KNN_ON) logResult(knn_results, klass3, trueClass);
+        if (RTREE_ON) logResult(rtree_results, klass4, trueClass);
+        if (MUGTREE_ON) logResult(mugtree_results, klass5, trueClass, kMug);
         
         
-        // cout << allImages[img].first << " is a ";
+        
+        // cout << (*testSet)[img].first << " is a ";
         // if (BAYES_ON) printf(" %s (bayes)!", classIntToString(klass).c_str());
         // if (SVM_ON)   printf(" %s (svm)!", classIntToString(klass2).c_str());
         // if (KNN_ON)   printf(" %s (knn)!", classIntToString(klass3).c_str());
@@ -786,45 +883,11 @@ bool Classifier::train_test()
     
     cout << endl;
     
-    if (BAYES_ON) {
-        double accuracy = (double)(bayes_results[0] + bayes_results[2]) / (double)(bayes_results[0] + bayes_results[1] + bayes_results[2] + bayes_results[3]); 
-        double precision = (double)bayes_results[0] / (double)(bayes_results[0] + bayes_results[1]);
-        double recall = (double)bayes_results[0] / (double)(bayes_results[0] + bayes_results[3]);
-        double fscore = 2 * (precision * recall) / (precision + recall);
-        
-        printf("bayes\ttp: %d\tfp: %d\ttn: %d\tfn: %d\n", bayes_results[0], bayes_results[1], bayes_results[2], bayes_results[3]);
-        printf("bayes\taccuracy: %f\tprecision: %f\trecall: %f\tfscore: %f\n", accuracy, precision, recall, fscore);
-    }
-    
-    if (SVM_ON) {
-        double accuracy = (double)(svm_results[0] + svm_results[2]) / (double)(svm_results[0] + svm_results[1] + svm_results[2] + svm_results[3]); 
-        double precision = (double)svm_results[0] / (double)(svm_results[0] + svm_results[1]);
-        double recall = (double)svm_results[0] / (double)(svm_results[0] + svm_results[3]);
-        double fscore = 2 * (precision * recall) / (precision + recall);
-        
-        printf("svm\ttp: %d\tfp: %d\ttn: %d\tfn: %d\n", svm_results[0], svm_results[1], svm_results[2], svm_results[3]);
-        printf("svm\taccuracy: %f\tprecision: %f\trecall: %f\tfscore: %f\n", accuracy, precision, recall, fscore);
-    }
-    
-    if (KNN_ON) {
-        double accuracy = (double)(knn_results[0] + knn_results[2]) / (double)(knn_results[0] + knn_results[1] + knn_results[2] + knn_results[3]); 
-        double precision = (double)knn_results[0] / (double)(knn_results[0] + knn_results[1]);
-        double recall = (double)knn_results[0] / (double)(knn_results[0] + knn_results[3]);
-        double fscore = 2 * (precision * recall) / (precision + recall);
-        
-        printf("knn\ttp: %d\tfp: %d\ttn: %d\tfn: %d\n", knn_results[0], knn_results[1], knn_results[2], knn_results[3]);
-        printf("knn\taccuracy: %f\tprecision: %f\trecall: %f\tfscore: %f\n", accuracy, precision, recall, fscore);
-    }
-    
-    if (RTREE_ON) {
-        double accuracy = (double)(rtree_results[0] + rtree_results[2]) / (double)(rtree_results[0] + rtree_results[1] + rtree_results[2] + rtree_results[3]); 
-        double precision = (double)rtree_results[0] / (double)(rtree_results[0] + rtree_results[1]);
-        double recall = (double)rtree_results[0] / (double)(rtree_results[0] + rtree_results[3]);
-        double fscore = 2 * (precision * recall) / (precision + recall);
-        
-        printf("rtree\ttp: %d\tfp: %d\ttn: %d\tfn: %d\n", rtree_results[0], rtree_results[1], rtree_results[2], rtree_results[3]);
-        printf("rtree\taccuracy: %f\tprecision: %f\trecall: %f\tfscore: %f\n", accuracy, precision, recall, fscore);
-    }
+    if (BAYES_ON) printResult(bayes_results, "bayes");
+    if (SVM_ON) printResult(svm_results, "svm");
+    if (RTREE_ON) printResult(rtree_results, "rtree");
+    if (KNN_ON) printResult(knn_results, "knn");
+    if (MUGTREE_ON) printResult(mugtree_results, "mugtree");
     
     cout << "Step Done:  test" << endl;
     return true;

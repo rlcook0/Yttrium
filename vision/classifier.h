@@ -35,7 +35,7 @@
 /* Classifier class ---------------------------------------------------------
  */
 
-#define NUM_CLUSTERS    500
+#define NUM_CLUSTERS    100
 #define MIN_IPOINTS     10
  
 enum ObjectTypes {
@@ -58,7 +58,7 @@ protected:
 
     // CS221 TO DO: ADD YOUR MEMBER VARIABLES HERE
     map< string, vector<Ipoint> > surfFeatures;
-    vector<pair<string, vector<Ipoint> > > allImages;
+    vector<pair<string, vector<Ipoint> > > allImages, *trainSet, *testSet;
     
     CvFeatureTree *surfFT, *centersFT;
     
@@ -77,6 +77,8 @@ protected:
     CvKNearest knn;
     CvSVM svm;
     CvRTrees rtree;
+    
+    CvBoost mugTree;
 
     CvMat* centers;
 public:
@@ -112,6 +114,7 @@ public:
     virtual bool train_knn(CvMat *, CvMat *);
     virtual bool train_test();
     virtual bool train_rtree(CvMat *, CvMat *);
+    virtual bool train_mugtree(CvMat *, CvMat *);
 
 private:
     
