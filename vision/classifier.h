@@ -113,7 +113,7 @@ public:
     virtual bool train_bayes(CvMat *, CvMat *);
     virtual bool train_svm(CvMat *, CvMat *);
     virtual bool train_knn(CvMat *, CvMat *);
-    virtual bool train_test(vector<pair<string, vector<Ipoint> > > *data);
+    virtual bool train_test(vector<pair<string, vector<Ipoint> > > *data, bool);
     virtual bool train_rtree(CvMat *, CvMat *);
     virtual bool train_mugtree(CvMat *, CvMat *);
 
