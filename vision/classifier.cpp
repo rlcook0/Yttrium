@@ -26,9 +26,14 @@
 #include "classifier.h"
 #include "logreg.h"
 
-#define BAYES_ON false
+#define BAYES_ON true
 #define SVM_ON true
 #define KNN_ON false
+
+#define LOAD_KMEANS false
+#define SAVE_KMEANS true
+#define LOAD_IPOINTS true
+#define SAVE_IPOINTS false
 
 // Classifier class ---------------------------------------------------------
  
@@ -233,6 +238,13 @@ string Classifier::classIntToString(int type)
     return "error";
 }
 
+CvMat *normalize(const CvMat* vector) {
+    CvMat *norm = cvCloneMat(vector);
+    double normVal = cvNorm(vector);
+    cvScale(vector, norm, 1 / normVal);
+    
+    return norm;
+}
 
 // TESTING ONLY
 bool Classifier::showRect(IplImage *image, CObject *rect, const vector<Ipoint> *pts = NULL) {
@@ -286,7 +298,7 @@ bool Classifier::run(const IplImage *frame, CObjectList *objects, bool scored)
     cvCvtColor(frame, gray, CV_BGR2GRAY);
     
     // Resize by half first, as per the handout.
-    double scale = 2.0;
+    double scale = 1.0;
     IplImage *dst = cvCreateImage(cvSize(gray->width  / scale, gray->height  / scale), gray->depth,  gray->nChannels);
     cvResize(gray, dst);
 
@@ -348,14 +360,14 @@ bool Classifier::run(const IplImage *frame, CObjectList *objects, bool scored)
 
 bool Classifier::run_boxscan(IplImage *dst, vector<int> &cluster, vector<Ipoint> &pts)
 {
-    float scale = 2.0f;
+    float scale = 4.0f;
     int maxWidth = dst->width;
     int maxHeight = dst->height;
     
     int numLayers = 7;
     while(numLayers-- > 0) {
-        for (int x = 0; x < maxWidth - 32*scale; x += 8) {
-            for (int y = 0; y < maxHeight - 32*scale; y += 8) {
+        for (int x = 0; x < maxWidth - 32*scale; x += 8 * scale) {
+            for (int y = 0; y < maxHeight - 32*scale; y += 8 * scale) {
                 std::vector<int> newpts;
                 for (int i = 0; i < (int)pts.size(); ++i) {
                     if (pts[i].x >= x && pts[i].x < x + 32*scale && pts[i].y >= y && pts[i].y < y + 32*scale)
@@ -376,9 +388,13 @@ bool Classifier::run_boxscan(IplImage *dst, vector<int> &cluster, vector<Ipoint>
                     
                 }
                 
+                // TEST?
+                CvMat* normalized = normalize(query);
+                query = normalized;
+                
                 // printf("\n");
                 // for (int i = 0; i < NUM_CLUSTERS; i++) {
-                    // printf("%d ", (int)cvGetReal2D(query, 0, i));
+                    // printf("%f ", cvGetReal2D(query, 0, i));
                 // }
                 // printf("\n");
         
@@ -418,29 +434,107 @@ bool Classifier::train(TTrainingFileList& fileList, const char *trainingFile)
     cout << "------------------------------------------" << endl;
     cout << "\t\tTraining" << endl;
     
-    CvMat *desc = cvCreateMat(allImages.size(), NUM_CLUSTERS, CV_32FC1);
-    CvMat *responses = cvCreateMat(allImages.size(), 1, CV_32SC1);
+    CvMat *desc, *responses;
+    if(!LOAD_KMEANS) {
+        if (!LOAD_IPOINTS) {
+            extract(fileList, trainingFile);
+        } else {
+            int numImages;
+            
+            ifstream num;
+            num.open("surf/num_images");
+            num >> numImages;
+            num.close();
+            
+            printf("Loading %d images...\n", numImages);
+            
+            surfTotalIpoints = 0;
+            for (int i = 0; i < numImages; ++i) {
+                showProgress(i, numImages);
+                char klassfn[50], datfn[50];
+                sprintf(klassfn, "surf/img%d.klass", i);
+                sprintf(datfn, "surf/img%d.dat", i);
+                
+                string klass;
+                
+                ifstream klassf;
+                klassf.open(klassfn);
+                klassf >> klass;
+                klassf.close();
+                
+                vector<Ipoint> pts;
+                loadSurf(datfn, pts);
+                
+                surfTotalIpoints += (int)pts.size();
+                
+                allImages.push_back(pair<string, vector<Ipoint> >(klass, pts));
+            }
+            
+            printf("Done!\n");
+        }
+        
+        if (!LOAD_IPOINTS && SAVE_IPOINTS) {
+            printf("Saving %d images...\n", (int)allImages.size());
+            for (int i = 0; i < (int)allImages.size(); ++i) {
+                showProgress(i, (int)allImages.size());
+                
+                char klassfn[50], datfn[50];
+                sprintf(klassfn, "surf/img%d.klass", i);
+                sprintf(datfn, "surf/img%d.dat", i);
+                
+                saveSurf(datfn, allImages[i].second);
+                
+                ofstream klass;
+                klass.open(klassfn);
+                klass << allImages[i].first;
+                klass.close();
+            }
+            
+            ofstream num;
+            num.open("surf/num_images");
+            num << (int)allImages.size();
+            num.close();
+            printf("Done!\n");
+        }
+        
+        desc = cvCreateMat(allImages.size(), NUM_CLUSTERS, CV_32FC1);
+        responses = cvCreateMat(allImages.size(), 1, CV_32SC1);
 
-    cout << "massaging responses..." << endl;
-    for (int i = 0; i < (int)allImages.size(); ++i) 
-    {
-        int klass = stringToClassInt(allImages[i].first);
-        cvSetReal1D(responses, i, klass);
+        cout << "massaging responses..." << endl;
+        for (int i = 0; i < (int)allImages.size(); ++i) 
+        {
+            int klass = stringToClassInt(allImages[i].first);
+            cvSetReal1D(responses, i, klass);
+        }
+
+        train_kmeans(desc);
+    } else {
+        printf("Loading kmeans...");
+        desc = (CvMat *)cvLoad("desc.dat");
+        centers = (CvMat *)cvLoad("centers.dat");
+        responses = (CvMat *)cvLoad("responses.dat");
+        printf(" Loaded!\n");
     }
     
-    train_kmeans(desc);
-    
-    
+    if (!LOAD_KMEANS && SAVE_KMEANS) {
+        printf("Saving desc, kmeans, and responses...");
+        cvSave("desc.dat", desc);
+        cvSave("responses.dat", responses);
+        cvSave("centers.dat", centers);
+        printf(" Saved!\n");
+    }
+
     train_bayes(desc, responses);
     train_svm(desc, responses);
     train_knn(desc, responses);
     
-    train_test();
-    
-    cvSave("centers.dat", centers);
+    printf("Saving classifiers...");
     if (BAYES_ON) bayes.save("bayes.dat");
     if (SVM_ON) svm.save("svm.dat");
     if (KNN_ON) knn.save("knn.dat");
+    printf(" Saved!\n");
+    
+    train_test();
     
     return true;
 }
@@ -480,7 +574,8 @@ bool Classifier::train_kmeans(CvMat *desc)
         0, // flags
         centers, // centers
         NULL); // compactness*/
-    //int cvKMeans2(const CvArr* samples, int nclusters, CvArr* labels, CvTermCriteria termcrit, int attempts=1, CvRNG* rng=0, int flags=0, CvArr* centers=0, double* compactness=0)¶
+    //int cvKMeans2(const CvArr* samples, int nclusters, CvArr* labels, CvTermCriteria termcrit,
+//    int attempts=1, CvRNG* rng=0, int flags=0, CvArr* centers=0, double* compactness=0)¶
     
     cout << "creating new descriptors..." << endl;
     
@@ -494,6 +589,18 @@ bool Classifier::train_kmeans(CvMat *desc)
             int oldVal = cvGetReal2D(desc, i, cluster);
             cvSetReal2D(desc, i, cluster, oldVal+1);
             ++where;
+        }
+        
+        // normalize
+        double total = 0;
+        for (int j = 0; j < NUM_CLUSTERS; ++j) {
+            double val = cvGetReal2D(desc, i, j);
+            total += val*val;
+        }
+        double norm = sqrt(total);
+        for (int j = 0; j < NUM_CLUSTERS; ++j) {
+            double val = cvGetReal2D(desc, i, j);
+            cvSetReal2D(desc, i, j, val / norm);
         }
     }
     
@@ -545,6 +652,11 @@ bool Classifier::train_test()
     cout << "------------------------------------------" << endl;
     cout << "Step Start: test" << endl;
     
+    int bayes_results[4], svm_results[4], knn_results[4];
+    for (int i = 0; i < 4; ++i)
+        bayes_results[i] = svm_results[i] = knn_results[i] = 0;
+    
+
     for (int img = 0; img < (int)allImages.size(); ++img) {
         vector<Ipoint> pts = allImages[img].second;
         vector<int> cluster(pts.size());
@@ -575,16 +687,97 @@ bool Classifier::train_test()
             cvSetReal2D(query, 0, cluster_idx, oldVal+1);
         }
         
+        // printf("\n");
+        // for (int i = 0; i < NUM_CLUSTERS; i++) {
+            // printf("%d ", (int)cvGetReal2D(query, 0, i));
+        // }
+        // printf("\n");
+        
+        CvMat *normalized = normalize(query);
+        query = normalized;
+        
+        int trueClass = stringToClassInt(allImages[img].first);
+        
         int klass, klass2, klass3;
         if (BAYES_ON) klass = bayes.predict(query);
         if (SVM_ON) klass2 = svm.predict(query);
         if (KNN_ON) klass3 = knn.find_nearest(query, 5);
         
-        cout << allImages[img].first << " is a ";
-        if (BAYES_ON) printf(" %s (bayes)!", classIntToString(klass).c_str());
-        if (SVM_ON)   printf(" %s (svm)!", classIntToString(klass2).c_str());
-        if (KNN_ON)   printf(" %s (knn)!", classIntToString(klass3).c_str());
-        cout << endl;
+        // tp, fp, tn, fn
+        
+        if (BAYES_ON) {
+            if (klass == trueClass)
+                if (klass != kOther)
+                    bayes_results[0] += 1;
+                else
+                    bayes_results[2] += 1;
+            else
+                if (klass != kOther)
+                    bayes_results[1] += 1;
+                else
+                    bayes_results[3] += 1;
+        } 
+        if (SVM_ON) {
+            if (klass2 == trueClass)
+                if (klass2 != kOther)
+                    svm_results[0] += 1;
+                else
+                    svm_results[2] += 1;
+            else
+                if (klass2 != kOther)
+                    svm_results[1] += 1;
+                else
+                    svm_results[3] += 1;
+        } 
+        if (KNN_ON) {
+            if (klass3 == trueClass)
+                if (klass3 != kOther)
+                    knn_results[0] += 1;
+                else
+                    knn_results[2] += 1;
+            else
+                if (klass3 != kOther)
+                    knn_results[1] += 1;
+                else
+                    knn_results[3] += 1;
+        } 
+        
+        
+        // cout << allImages[img].first << " is a ";
+        // if (BAYES_ON) printf(" %s (bayes)!", classIntToString(klass).c_str());
+        // if (SVM_ON)   printf(" %s (svm)!", classIntToString(klass2).c_str());
+        // if (KNN_ON)   printf(" %s (knn)!", classIntToString(klass3).c_str());
+        // cout << endl;
+    }
+    
+    if (BAYES_ON) {
+        double accuracy = (double)(bayes_results[0] + bayes_results[1]) / (double)(bayes_results[0] + bayes_results[1] + bayes_results[2] + bayes_results[3]); 
+        double precision = (double)bayes_results[0] / (double)(bayes_results[0] + bayes_results[1]);
+        double recall = (double)bayes_results[0] / (double)(bayes_results[0] + bayes_results[3]);
+        double fscore = 2 * (precision * recall) / (precision + recall);
+        
+        printf("bayes\ttp: %d\tfp: %d\ttn: %d\tfn: %d\n", bayes_results[0], bayes_results[1], bayes_results[2], bayes_results[3]);
+        printf("bayes\taccuracy: %f\tprecision: %f\trecall: %f\tfscore: %f\n", accuracy, precision, recall, fscore);
+    }
+    
+    if (SVM_ON) {
+        double accuracy = (double)(svm_results[0] + svm_results[1]) / (double)(svm_results[0] + svm_results[1] + svm_results[2] + svm_results[3]); 
+        double precision = (double)svm_results[0] / (double)(svm_results[0] + svm_results[1]);
+        double recall = (double)svm_results[0] / (double)(svm_results[0] + svm_results[3]);
+        double fscore = 2 * (precision * recall) / (precision + recall);
+        
+        printf("svm\ttp: %d\tfp: %d\ttn: %d\tfn: %d\n", svm_results[0], svm_results[1], svm_results[2], svm_results[3]);
+        printf("svm\taccuracy: %f\tprecision: %f\trecall: %f\tfscore: %f\n", accuracy, precision, recall, fscore);
+    }
+    
+    if (KNN_ON) {
+        double accuracy = (double)(knn_results[0] + knn_results[1]) / (double)(knn_results[0] + knn_results[1] + knn_results[2] + knn_results[3]); 
+        double precision = (double)knn_results[0] / (double)(knn_results[0] + knn_results[1]);
+        double recall = (double)knn_results[0] / (double)(knn_results[0] + knn_results[3]);
+        double fscore = 2 * (precision * recall) / (precision + recall);
+        
+        printf("knn\ttp: %d\tfp: %d\ttn: %d\tfn: %d\n", knn_results[0], knn_results[1], knn_results[2], knn_results[3]);
+        printf("knn\taccuracy: %f\tprecision: %f\trecall: %f\tfscore: %f\n", accuracy, precision, recall, fscore);
     }
     
     cout << "Step Done:  test" << endl;
@@ -606,14 +799,13 @@ bool Classifier::extract(TTrainingFileList& fileList, const char *featuresFile)
     }
     cout << endl;
 
-    IplImage *image, *smallImage;
+    IplImage *image;
     vector<Ipoint> all;
 
-    int maxOther = 200;
-    int maxImages = INT_MAX;
+    int maxOther = 500;
+    int maxImages = 1000;
 
     cout << "Processing images..." << endl;
-    smallImage = cvCreateImage(cvSize(32, 32), IPL_DEPTH_8U, 1);
 
     int minfiles = min(maxImages, (int)fileList.files.size());
     for (int i = 0; i < minfiles; i++) 
@@ -629,8 +821,7 @@ bool Classifier::extract(TTrainingFileList& fileList, const char *featuresFile)
             cerr << "ERROR: could not load image " << fileList.files[i].filename.c_str() << endl;
             continue;
         }
-
-        //printf("surf\n");
+        
         // SURF.
         std::vector<Ipoint> pts;
         surfDetDes(image, pts, false);
@@ -643,8 +834,6 @@ bool Classifier::extract(TTrainingFileList& fileList, const char *featuresFile)
         cvReleaseImage(&image);
     }
 
-    // free memory
-    cvReleaseImage(&smallImage);
     cout << endl << "Extracted surf features: " << endl;
 
     int total = 0;

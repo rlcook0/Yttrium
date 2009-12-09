@@ -36,7 +36,7 @@
  */
 
 #define NUM_CLUSTERS    500
-#define MIN_IPOINTS     5
+#define MIN_IPOINTS     10
  
 enum ObjectTypes {
     kClock = 1,
