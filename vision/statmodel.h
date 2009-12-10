@@ -167,3 +167,41 @@ protected:
     
 };
 
+
+class SM_Bayes : public StatModel {
+public:
+    
+    SM_Bayes() : StatModel() { savename = "bayes.dat"; name="Bayes"; model = NULL; model = &bayes; }
+    
+protected:
+    
+    virtual bool train_run(DataSet *data);
+    virtual bool test_run(DataSet *data);
+    virtual int predict(CvMat *query);    
+
+    CvNormalBayesClassifier bayes;
+    
+};
+
+
+
+class SM_BTrees : public StatModel {
+public:
+    
+    SM_BTrees() : StatModel() { savename = "btrees.dat"; name="BTrees"; model = NULL; model =  &(trees[0]); }
+    
+    virtual bool save();
+    virtual bool load();
+    virtual int predict(CvMat *query);    
+    virtual int predict(CvMat *query, float *scores);    
+    
+protected:
+    
+    virtual bool train_run(DataSet *data);
+    virtual bool test_run(DataSet *data);
+
+    CvBoost trees[kNumObjectTypes - 1];
+    
+};
+
+

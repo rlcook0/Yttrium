@@ -50,7 +50,7 @@ void usage() {
     cerr << "Options:" << endl;
     cerr << "    -lk :: load kmeans" << endl;
     cerr << "    -sk :: save kmeans" << endl;
-    cerr << "    -c <num> :: num clusters " << endl;
+    cerr << "    -k <num> :: num clusters " << endl;
     cerr << "    -o <num> :: max others " << endl;
     
     cerr << endl << "Classifiers:" << endl;
@@ -96,21 +96,29 @@ int main(int argc, char *argv[])
             
             
             
-        } else if (!strcmp(*args, "-c")) { 
+        } else if (!strcmp(*args, "-k")) { 
             argc--; args++;
-            sscanf(*args, "%d", &(classifier.num_clusters));
+            sscanf(*args, "%i", &(classifier.num_clusters));
+            printf("Set num_clusters to %d \n", classifier.num_clusters);
             
         } else if (!strcmp(*args, "-o")) { 
             argc--; args++;
-            sscanf(*args, "%d", &(classifier.max_others));
+            int d;
+            sscanf(*args, "%i", &d);
+            classifier.max_others = d;
+            printf("Set max_others to %d \n", d);
             
-        } else if (!strcmp(*args, "-lk")) { classifier.load_kmeans = true;
-        } else if (!strcmp(*args, "-sk")) { classifier.save_kmeans = true;
+        } else if (!strcmp(*args, "-lk")) { classifier.kmeans_load = true;
+        } else if (!strcmp(*args, "-sk")) { classifier.kmeans_save = true;
 
-        } else if (!strcmp(*args, "-b")) { classifier.bayes_on = true;   
-        } else if (!strcmp(*args, "-s")) { classifier.svm_on   = true;
-        } else if (!strcmp(*args, "-r")) { classifier.rtree_on = true;
-        } else if (!strcmp(*args, "-t")) { classifier.trees_on = true;
+        } else if (!strcmp(*args, "-b")) { classifier.bayes.on = true;   
+        } else if (!strcmp(*args, "-s")) { classifier.svm.on = true;
+        } else if (!strcmp(*args, "-r")) { classifier.rtrees.on = true;
+        } else if (!strcmp(*args, "-t")) { classifier.btrees.on = true;
+            
+            
+        } else if (!strcmp(*args, "--save")) { classifier.save_all = true;    
+        } else if (!strcmp(*args, "--load")) { classifier.load_all = true;
             
         } else if (!strcmp(*args, "-h")) {
             usage();
@@ -124,18 +132,16 @@ int main(int argc, char *argv[])
         args++;
     }
 
-    if (argc != 1) {
-	usage();
-	exit(-1);
-    }
-
+    if (argc != 1) { usage(); exit(-1); }
+    cout << endl; 
+    
     // load the training file list
     TTrainingFileList fileList;
     fileList = getTrainingFiles(*args, ".jpg");
     
     if (!classifier.extract(fileList)) {
         cerr << "ERROR: coult not extract features" << endl;
-        exit(-1)
+        exit(-1);
     }
     
     // now train the classifier

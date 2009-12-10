@@ -39,6 +39,12 @@
 using namespace std;
 
 
+typedef struct FoundObject {
+    CObject object; 
+    double score;
+} FoundObject;
+
+
 class Ipoint;
 struct CvFeatureTree;
 
@@ -60,10 +66,14 @@ public:
     
     // destructor
     virtual ~Classifier();
+    
+    bool loadState();
 
     // run the classifier over a single frame
-    virtual bool run(const IplImage *, CObjectList *, bool);
-//    virtual bool run_boxscan(IplImage *, vector<int> &, vector<CvSURFPoint> &, vector<feat> &);
+    void optical_flow(const IplImage *frame, double *xD, double *yD);
+    bool run_boxscan(IplImage *dst, vector<int> &cluster, vector<CvSURFPoint> &keypts, vector<float *> &pts, vector<FoundObject> &newObjects, const CObjectList *oldObjects);
+    bool run(const IplImage *frame, CObjectList *objects, bool scored);
+    bool showRect(IplImage *image, CObject *rect, const vector<CvSURFPoint> *pts = NULL);
     
     // extract the classifier features
     virtual bool extract(TTrainingFileList&);
@@ -81,22 +91,25 @@ public:
     bool kmeans_load;
     bool kmeans_save;
     
+    bool load_all;
+    bool save_all;
+    
     bool test_on;
     
     int num_clusters;
     int max_others;
     int test_to_train;
     
-    //    SM_Bayes bayes;
-        SM_SVM svm;
-        SM_RTrees rtrees;
-        
-        //StatModel rtree;
-        ///StatModel trees;
+    SM_Bayes bayes;
+    SM_SVM svm;
+    SM_RTrees rtrees;
+    SM_BTrees btrees;
+    //StatModel rtree;
+    ///StatModel trees;
 
+    IplImage *prevFrame;
 
 private:
     
-    bool showRect(IplImage *, CObject *, const vector<CvSURFPoint> *);
 };
 

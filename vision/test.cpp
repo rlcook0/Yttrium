@@ -48,6 +48,19 @@ void usage() {
     cerr << "    -o <filename>  :: output to file" << endl;
     cerr << "    -v             :: verbose" << endl;
     cerr << "    -x             :: disable display" << endl;
+    
+    cerr << endl << "More:" << endl;
+    cerr << "    -lk :: load kmeans" << endl;
+    cerr << "    -sk :: save kmeans" << endl;
+    cerr << "    -k <num> :: num clusters " << endl;
+    cerr << "    -o <num> :: max others " << endl;
+    
+    cerr << endl << "Classifiers:" << endl;
+    cerr << "    -b :: use Naive Bayes" << endl;
+    cerr << "    -s :: use SVM" << endl;
+    cerr << "    -r :: use Random Forest" << endl;
+    cerr << "    -t :: use Boosted Decision Trees" << endl;
+    
     cerr << endl;
 }
 
@@ -69,6 +82,8 @@ int main(int argc, char *argv[])
     bVerbose = false;           // turn on with -v
     bShowVideo = true;          // turn off with -x
     fpsDelay = 65;              // 65ms delay (~15fps)
+
+    Classifier classifier;
 
     // check arguments
     args = argv + 1;
@@ -105,6 +120,27 @@ int main(int argc, char *argv[])
                 return -1;
             }
             outputFile = *args;
+        
+            
+            
+        } else if (!strcmp(*args, "-k")) { 
+            argc--; args++;
+            sscanf(*args, "%i", &(classifier.num_clusters));
+            printf("Set num_clusters to %d \n", classifier.num_clusters);
+                
+        
+        } else if (!strcmp(*args, "-lk")) { classifier.kmeans_load = true;
+        } else if (!strcmp(*args, "-sk")) { classifier.kmeans_save = true;
+
+        } else if (!strcmp(*args, "-b")) { classifier.bayes.on = true;   
+        } else if (!strcmp(*args, "-s")) { classifier.svm.on = true;
+        } else if (!strcmp(*args, "-r")) { classifier.rtrees.on = true;
+        } else if (!strcmp(*args, "-t")) { classifier.btrees.on = true;
+
+
+        } else if (!strcmp(*args, "--save")) { classifier.save_all = true;    
+        } else if (!strcmp(*args, "--load")) { classifier.load_all = true;
+            
         } else if (!strcmp(*args, "-v")) {
             bVerbose = !bVerbose;
         } else if (!strcmp(*args, "-x")) {
@@ -134,18 +170,17 @@ int main(int argc, char *argv[])
         cout << "Test video directory:      " << aviFile << endl;       
     }
 
-    Classifier classifier;
     CObjectReplay replayer;
     CvFont font;
     ofstream *outputStream = NULL;
 
-    // // configure the classifier
-    // if (configurationFile != NULL) {
-    //     if (!classifier.loadState(configurationFile)) {
-    //         cerr << "ERROR: could not configure the classifier" << endl;
-    //         exit(-1);
-    //     }
-    // }
+    // configure the classifier
+    //if (configurationFile != NULL) {
+    if (!classifier.loadState()) {
+        cerr << "ERROR: could not configure the classifier" << endl;
+        exit(-1);
+    }
+    //}
     
     // configure the replayer
     if (groundTruthFile != NULL) {
