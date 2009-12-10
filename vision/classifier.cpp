@@ -430,8 +430,8 @@ bool Classifier::run(const IplImage *frame, CObjectList *objects, bool scored)
     vector<FoundObject> newObjects;
     run_boxscan(dst, cluster, keypts, features, newObjects, objects);
     for (int i = 0; i < (int)newObjects.size(); ++i) {
-        if (newObjects[i].rect.x > -20 && newObjects[i].rect.x < frame->width 
-         && newObjects[i].rect.y > -20 && newObjects[i].rect.y < frame->height)
+        if (newObjects[i].object.rect.x > -20 && newObjects[i].object.rect.x < frame->width 
+         && newObjects[i].object.rect.y > -20 && newObjects[i].object.rect.y < frame->height)
             objects->push_back(newObjects[i].object);
     }
     
