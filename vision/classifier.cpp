@@ -1096,7 +1096,7 @@ bool Classifier::extract(TTrainingFileList& fileList, const char *featuresFile)
         
         vector<feat> features;
         int where = 0;
-        for (int pt = 0; pt < (int)keypts->total; ++pt) {
+        for (int pt = 0; pt < (int)keypts.size(); ++pt) {
             float *f = new float[SURF_SIZE];
             for (int j = 0; j < SURF_SIZE; ++j) {
                 f[j] = desc[where];
