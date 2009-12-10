@@ -38,6 +38,8 @@
 #define NUM_CLUSTERS    1000
 #define MIN_IPOINTS     15
 #define SURF_SIZE       128
+#define MAX_CORNERS     500
+#define DIST_THRESH     10;
  
 enum ObjectTypes {
     kClock = 0,

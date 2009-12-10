@@ -1055,21 +1055,63 @@ bool Classifier::extract(TTrainingFileList& fileList, const char *featuresFile)
         CvSURFParams params = cvSURFParams(100, SURF_SIZE == 128);
         cvExtractSURF(image, 0, &keypoints, &descriptors, storage, params);
         
+        // IVAN's 
+        CvPoint2D32f* corners = new CvPoint2D32f[ MAX_CORNERS ];
+        IplImage* eig_image = cvCreateImage( img_sz, IPL_DEPTH_32F, 1 );
+        IplImage* tmp_image = cvCreateImage( img_sz, IPL_DEPTH_32F, 1 );
+        int corner_count = MAX_CORNERS;
+        CvSize img_sz = cvGetSize(image);
+        cvGoodFeaturesToTrack(
+            image,
+            eig_image,
+            tmp_image,
+            corners,
+            &corner_count,
+            0.01,
+            5.0,
+            0,
+            3,
+            0,
+            0.04
+        );
+        cvFindCornerSubPix(
+            image,
+            corners,
+            corner_count,
+            cvSize(10, 10),
+            cvSize(-1, -1),
+            cvTermCriteria(CV_TERMCRIT_ITER|CV_TERMCRIT_EPS,20,0.03)
+        );
+        
+        
         if (descriptors->total == 0) continue;
         
         vector<float> desc;
         desc.resize(descriptors->total * descriptors->elem_size/sizeof(float));
         cvCvtSeqToArray(descriptors, &desc[0]);
         
+        vector<CvSURFPoint> keypts;
+        keypts.resize(keypoints->total);
+        cvCvtSeqToArray(keypoints, &keypts[0]);
+        
         vector<feat> features;
         int where = 0;
-        for (int pt = 0; pt < keypoints->total; ++pt) {
+        for (int pt = 0; pt < (int)keypts->total; ++pt) {
             float *f = new float[SURF_SIZE];
             for (int j = 0; j < SURF_SIZE; ++j) {
                 f[j] = desc[where];
                 ++where;
             }
-            features.push_back(f);
+            
+            for (int c = 0; c < corner_count; c++)
+            {
+                if (fabs(keypts[pt].pt.x - corners[c].x) < DIST_THRESH 
+                 && fabs(keypts[pt].pt.y - corners[c].y) < DIST_THRESH)
+                 {
+                     features.push_back(f);
+                     break;
+                 }
+            }
         }
         
         allImages.push_back(class_feat(label, features));
