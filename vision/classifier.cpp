@@ -54,6 +54,8 @@ Classifier::Classifier()
     
     prevFrame = NULL;
     
+    totalXDiff = totalYDiff = 0;
+    
 }
     
 // destructor
@@ -350,10 +352,11 @@ bool Classifier::showRect(IplImage *image, CObject *rect, const vector<CvSURFPoi
 
 bool Classifier::run(const IplImage *frame, CObjectList *objects, bool scored)
 {
-    
-    double xDiff, yDiff;
+    double xDiff = 0, yDiff = 0;
     optical_flow(frame, &xDiff, &yDiff);
     
+    totalXDiff += xDiff;
+    totalYDiff += yDiff;
     if (!scored)
         return true;
     
@@ -364,11 +367,21 @@ bool Classifier::run(const IplImage *frame, CObjectList *objects, bool scored)
     
     printf("Let's go!\n");
     
+    for (int i = 0; i < (int)prevObjects.size(); ++i) {
+        if (prevObjects[i].rect.x > -20 && prevObjects[i].rect.x < frame->width 
+         && prevObjects[i].rect.y > -20 && prevObjects[i].rect.y < frame->height)
+            objects->push_back(prevObjects[i]);
+    }
+    
+    //printf("HEY OPTICAL FLOW!!!! %f %f\n", totalXDiff, totalYDiff);
+    
     // move old objects
     for (int i = 0; i < (int)objects->size(); ++i) {
-        (*objects)[i].rect.x += xDiff;
-        (*objects)[i].rect.y += xDiff;
+        (*objects)[i].rect.x -= totalXDiff;
+        (*objects)[i].rect.y -= totalYDiff;
     }
+    totalYDiff = 0;
+    totalXDiff = 0;
     
     // Convert to grayscale.
     IplImage *gray  = cvCreateImage(cvGetSize(frame), IPL_DEPTH_8U, 1);
@@ -417,8 +430,12 @@ bool Classifier::run(const IplImage *frame, CObjectList *objects, bool scored)
     vector<FoundObject> newObjects;
     run_boxscan(dst, cluster, keypts, features, newObjects, objects);
     for (int i = 0; i < (int)newObjects.size(); ++i) {
-        objects->push_back(newObjects[i].object);
+        if (newObjects[i].rect.x > -20 && newObjects[i].rect.x < frame->width 
+         && newObjects[i].rect.y > -20 && newObjects[i].rect.y < frame->height)
+            objects->push_back(newObjects[i].object);
     }
+    
+    prevObjects = *objects;
     
     cvReleaseImage(&gray);
   
@@ -518,10 +535,10 @@ bool Classifier::run_boxscan(IplImage *dst, vector<int> &cluster, vector<CvSURFP
                 if (klass != kOther) {
                     FoundObject fo;
                     CObject o;
-                    o.rect = cvRect(x, y, 32*scale, 32*scale);
+                    o.rect = cvRect(x * scale, y * scale, 48*scale, 48*scale);
                     o.label = classIntToString(klass);
                     fo.object = o;
-                    fo.score = min_score;
+                    fo.score = min_score * scale;
                     
                     newObjects.push_back(fo);
                 }
@@ -537,29 +554,38 @@ bool Classifier::run_boxscan(IplImage *dst, vector<int> &cluster, vector<CvSURFP
         
         scale *= 1.1;
     }
-    
     // Possibly add found objects
     vector<int> toRemove;
-    
+
+    float minScore = 100.0f;
+    FoundObject minScoreObject;
     // prefer lower-scoring
     for (int i = 0; i < (int)newObjects.size(); ++i) {
-        const CObject &o = newObjects[i].object;
-        for (int j = 0; j < (int)newObjects.size(); ++j) {
-            if (i == j) continue;
-            
-            int overlap = o.overlap(newObjects[j].object);
-            if (overlap > o.rect.width * o.rect.height * 0.3
-                && newObjects[i].score > newObjects[j].score) {
-                toRemove.push_back(i);
-                break;
+        if (newObjects[i].score < minScore) {
+            minScore = newObjects[i].score;
+            minScoreObject = newObjects[i];
+        }
+    }
+    // find larger objects
+    bool foundbigger = true;
+    while(foundbigger) {
+        foundbigger = false;
+        for (int i = (int)newObjects.size() - 1; i >= 0; --i) {
+            if (newObjects[i].object.overlap(minScoreObject.object) > minScoreObject.object.area() * 0.8
+                && newObjects[i].object.area() > minScoreObject.object.area()) {
+                foundbigger = true;
+                minScoreObject = newObjects[i];
             }
         }
     }
-    for (int i = 0; i < (int)toRemove.size(); ++i) {
-        newObjects.erase(newObjects.begin() + toRemove[i]);
-    }
-    toRemove.clear();
-    
+
+    newObjects.clear();
+    newObjects.push_back(minScoreObject);
+    // for (int i = 0; i < (int)toRemove.size(); ++i) {
+        // newObjects.erase(newObjects.begin() + toRemove[i]);
+    // }
+    // toRemove.clear();
+
     // dont overlap with old objects
     toRemove.clear();
     for (int i = 0; i < (int)newObjects.size(); ++i) {
@@ -576,7 +602,7 @@ bool Classifier::run_boxscan(IplImage *dst, vector<int> &cluster, vector<CvSURFP
         newObjects.erase(newObjects.begin() + toRemove[i]);
     }
     toRemove.clear();
-    
+
     return true;
 }
 

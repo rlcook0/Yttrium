@@ -60,6 +60,9 @@ protected:
         
     CvMat* centers;
     
+    double totalXDiff, totalYDiff;
+    vector<CObject> prevObjects;
+    
 public:
     // constructors
     Classifier();
