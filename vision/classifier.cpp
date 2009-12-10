@@ -377,8 +377,8 @@ bool Classifier::run(const IplImage *frame, CObjectList *objects, bool scored)
     
     // move old objects
     for (int i = 0; i < (int)objects->size(); ++i) {
-        (*objects)[i].rect.x -= totalXDiff * 10;
-        (*objects)[i].rect.y -= totalYDiff * 10;
+        (*objects)[i].rect.x -= totalXDiff * 5;
+        (*objects)[i].rect.y -= totalYDiff * 5;
     }
     
     cout << "Flow: " << totalXDiff << " " << totalYDiff << endl;
