@@ -49,6 +49,11 @@ enum ObjectTypes {
     kNumObjectTypes
 };
 
+typedef struct FoundObject {
+    CObject object; 
+    double score;
+} FoundObject;
+
 using namespace std;
 
 typedef float* feat;
@@ -63,6 +68,8 @@ class Classifier {
 protected:
     CvRNG rng;
     CvMemStorage* storage;
+    
+    vector<FoundObject> prevObjects;
     
     // CS221 TO DO: ADD YOUR MEMBER VARIABLES HERE
     map< string, vector<Ipoint> > surfFeatures;
@@ -89,7 +96,11 @@ protected:
     
     CvBoost trees[kNumObjectTypes];
 
+    IplImage *prevFrame;
+    
     CvMat* centers;
+    void optical_flow(const IplImage *, double *, double *);
+    
 public:
     // constructors
     Classifier();
@@ -109,7 +120,8 @@ public:
     
     // run the classifier over a single frame
     virtual bool run(const IplImage *, CObjectList *, bool);
-    virtual bool run_boxscan(IplImage *, vector<int> &, vector<CvSURFPoint> &, vector<feat> &);
+    virtual bool run_boxscan(IplImage *, vector<int> &, vector<CvSURFPoint> &, vector<feat> &,
+        vector<FoundObject> &, const CObjectList *);
     
     // extract the classifier features
     virtual bool extract(TTrainingFileList&, const char *);

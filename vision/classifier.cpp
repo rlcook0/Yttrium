@@ -288,10 +288,11 @@ bool Classifier::showRect(IplImage *image, CObject *rect, const vector<CvSURFPoi
 // results on more frames)
 bool Classifier::run(const IplImage *frame, CObjectList *objects, bool scored)
 {
+    double xDiff, yDiff;
+    optical_flow(frame, &xDiff, &yDiff);
+    
     if (!scored)
         return true;
-    
-    assert(centers != NULL);
     
     cout << "--------------------------------------" << endl;
     cout << "\t\tRun" << endl;
@@ -299,6 +300,12 @@ bool Classifier::run(const IplImage *frame, CObjectList *objects, bool scored)
     assert((frame != NULL) && (objects != NULL));
     
     printf("Let's go!\n");
+    
+    // move old objects
+    for (int i = 0; i < (int)objects->size(); ++i) {
+        (*objects)[i].rect.x += xDiff;
+        (*objects)[i].rect.y += xDiff;
+    }
     
     // Convert to grayscale.
     IplImage *gray  = cvCreateImage(cvGetSize(frame), IPL_DEPTH_8U, 1);
@@ -359,20 +366,215 @@ cout << "desc: " << descriptors->total << endl;
     }
     printf("Done clustering...\n");
     
-    run_boxscan(dst, cluster, keypts, features);
-
+    vector<FoundObject> newObjects;
+    run_boxscan(dst, cluster, keypts, features, newObjects, objects);
+    for (int i = 0; i < (int)newObjects.size(); ++i) {
+        objects->push_back(newObjects[i].object);
+    }
+    
     cvReleaseImage(&gray);
+  
     return true;
 }
 
+void Classifier::optical_flow(const IplImage *frame, double *xD, double *yD) {
+    double xDiff = 0;
+  double yDiff = 0;
+  //double xQDiff = 0;
+  //double yQDiff = 0;
+  if (prevFrame) {
+	  /* Optical flow for entire image */
+	  CvSize img_sz = cvGetSize(frame);
+	  
+	  IplImage *imgA = cvCreateImage(img_sz, IPL_DEPTH_8U, 1);
+	  IplImage *imgB = cvCreateImage(img_sz, IPL_DEPTH_8U, 1);
+	  
+	  cvCvtColor(frame, imgA, CV_BGR2GRAY);
+	  cvCvtColor(prevFrame, imgB, CV_BGR2GRAY);
+	  
+	  CvMat* velx = cvCreateMatHeader( img_sz.height, img_sz.width, CV_32FC1 );   
+      cvCreateData( velx );   
+      CvMat* vely = cvCreateMatHeader( img_sz.height, img_sz.width, CV_32FC1 );   
+      cvCreateData( vely );
+	  
+	  cvCalcOpticalFlowLK(
+		imgA,
+		imgB,
+		cvSize(15, 15),
+		velx,
+		vely
+	  );
+	  
+	  xDiff = cvAvg(velx).val[0];
+	  yDiff = cvAvg(vely).val[0];
+	  
+      *xD = xDiff;
+      *yD = yDiff;
+	   // CvPoint p0 = cvPoint(
+		 // img_sz.width/2,
+		 // img_sz.height/2
+	   // );
+	   // CvPoint p1 = cvPoint(
+		 // img_sz.width/2 - xDiff*100,
+		 // img_sz.height/2 - yDiff*100
+	   // );
+	   
+	   //cvLine( imgA, p0, p1, CV_RGB(255,0,0),2 );
+	   
+	  /* Optical flow for first quadrant */
+	  // CvSize quadrant_size = cvSize(img_sz.width/2, img_sz.height/2);
+	  
+	  // IplImage *imgQA = cvCreateImage(img_sz, IPL_DEPTH_8U, 1);
+	  // IplImage *imgQB = cvCreateImage(img_sz, IPL_DEPTH_8U, 1);
+	  
+	  // cvCvtColor(frame, imgQA, CV_BGR2GRAY);
+	  // cvCvtColor(prevFrame, imgQB, CV_BGR2GRAY);
+	  
+	  // cvSetImageROI(imgQA, cvRect(0,0,quadrant_size.width,quadrant_size.height));
+	  // cvSetImageROI(imgQB, cvRect(0,0,quadrant_size.width,quadrant_size.height));
+	  
+	  // CvMat* velQx = cvCreateMatHeader( quadrant_size.height, quadrant_size.width, CV_32FC1 );   
+      // cvCreateData( velQx );   
+      // CvMat* velQy = cvCreateMatHeader( quadrant_size.height, quadrant_size.width, CV_32FC1 );   
+      // cvCreateData( velQy );
+	  
+	  // cvCalcOpticalFlowLK(
+		// imgQA,
+		// imgQB,
+		// cvSize(15, 15),
+		// velQx,
+		// velQy
+	  // );
+	  
+	  // xQDiff = cvAvg(velQx).val[0];
+	  // yQDiff = cvAvg(velQy).val[0];
+	  
+	   // CvPoint pQ0 = cvPoint(
+		 // quadrant_size.width/2,
+		 // quadrant_size.height/2
+	   // );
+	   // CvPoint pQ1 = cvPoint(
+		 // quadrant_size.width/2 - xQDiff*50,
+		 // quadrant_size.height/2 - yQDiff*50
+	   // );
+	   
+	   // cvLine( imgA, pQ0, pQ1, CV_RGB(255,0,0),2 );
+	   
+	  // /* Optical flow for second quadrant */
+	  // cvSetImageROI(imgQA, cvRect(quadrant_size.width,0,quadrant_size.width,quadrant_size.height));
+	  // cvSetImageROI(imgQB, cvRect(quadrant_size.width,0,quadrant_size.width,quadrant_size.height));
+	  
+	  // velQx = cvCreateMatHeader( quadrant_size.height, quadrant_size.width, CV_32FC1 );   
+      // cvCreateData( velQx );   
+      // velQy = cvCreateMatHeader( quadrant_size.height, quadrant_size.width, CV_32FC1 );   
+      // cvCreateData( velQy );
+	  
+	  // cvCalcOpticalFlowLK(
+		// imgQA,
+		// imgQB,
+		// cvSize(15, 15),
+		// velQx,
+		// velQy
+	  // );
+	  
+	  // xQDiff = cvAvg(velQx).val[0];
+	  // yQDiff = cvAvg(velQy).val[0];
+	  
+	   // pQ0 = cvPoint(
+		 // 3*quadrant_size.width/2,
+		 // quadrant_size.height/2
+	   // );
+	   // pQ1 = cvPoint(
+		 // 3*quadrant_size.width/2 - xQDiff*50,
+		 // quadrant_size.height/2 - yQDiff*50
+	   // );
+	   
+	   // cvLine( imgA, pQ0, pQ1, CV_RGB(255,0,0),2 );
+			
+	   // /* Optical flow for third quadrant */	  
+	  // cvSetImageROI(imgQA, cvRect(0,quadrant_size.height,quadrant_size.width,quadrant_size.height));
+	  // cvSetImageROI(imgQB, cvRect(0,quadrant_size.height,quadrant_size.width,quadrant_size.height));
+	  
+	  // velQx = cvCreateMatHeader( quadrant_size.height, quadrant_size.width, CV_32FC1 );   
+      // cvCreateData( velQx );   
+      // velQy = cvCreateMatHeader( quadrant_size.height, quadrant_size.width, CV_32FC1 );   
+      // cvCreateData( velQy );
+	  
+	  // cvCalcOpticalFlowLK(
+		// imgQA,
+		// imgQB,
+		// cvSize(15, 15),
+		// velQx,
+		// velQy
+	  // );
+	  
+	  // xQDiff = cvAvg(velQx).val[0];
+	  // yQDiff = cvAvg(velQy).val[0];
+	  
+	   // pQ0 = cvPoint(
+		 // quadrant_size.width/2,
+		 // 3*quadrant_size.height/2
+	   // );
+	   // pQ1 = cvPoint(
+		 // quadrant_size.width/2 - xQDiff*50,
+		 // 3*quadrant_size.height/2 - yQDiff*50
+	   // );
+	   
+	   // cvLine( imgA, pQ0, pQ1, CV_RGB(255,0,0),2 );
+	   
+	   // /* Optical flow for fourth quadrant */	  	  
+	  // cvSetImageROI(imgQA, cvRect(quadrant_size.width,quadrant_size.height,quadrant_size.width,quadrant_size.height));
+	  // cvSetImageROI(imgQB, cvRect(quadrant_size.width,quadrant_size.height,quadrant_size.width,quadrant_size.height));
+	  
+	  // velQx = cvCreateMatHeader( quadrant_size.height, quadrant_size.width, CV_32FC1 );   
+      // cvCreateData( velQx );   
+      // velQy = cvCreateMatHeader( quadrant_size.height, quadrant_size.width, CV_32FC1 );   
+      // cvCreateData( velQy );
+	  
+	  // cvCalcOpticalFlowLK(
+		// imgQA,
+		// imgQB,
+		// cvSize(15, 15),
+		// velQx,
+		// velQy
+	  // );
+	  
+	  // xQDiff = cvAvg(velQx).val[0];
+	  // yQDiff = cvAvg(velQy).val[0];
+	  
+	   // pQ0 = cvPoint(
+		 // 3*quadrant_size.width/2,
+		 // 3*quadrant_size.height/2
+	   // );
+	   // pQ1 = cvPoint(
+		 // 3*quadrant_size.width/2 - xQDiff*50,
+		 // 3*quadrant_size.height/2 - yQDiff*50
+	   // );
+	   
+	   // cvLine( imgA, pQ0, pQ1, CV_RGB(255,0,0),2 );
+	   
+	  // cvNamedWindow("Optical FLOW",0);
+	  // cvShowImage("Optical FLOW",imgA);
+	  
+  } // if
+  else {
+	prevFrame = cvCreateImage (
+		cvGetSize(frame),
+		frame->depth,
+		frame->nChannels
+	);
+  } // else  
+  
+	cvCopy(frame, prevFrame);	
+}
 
-bool Classifier::run_boxscan(IplImage *dst, vector<int> &cluster, vector<CvSURFPoint> &keypts, vector<feat> &pts)
+bool Classifier::run_boxscan(IplImage *dst, vector<int> &cluster, vector<CvSURFPoint> &keypts, vector<feat> &pts, vector<FoundObject> &newObjects, const CObjectList *oldObjects)
 {
     float scale = 2.0f;
     int maxWidth = dst->width;
     int maxHeight = dst->height;
-    
-    int numLayers = 10;
+
+    int numLayers = 7;
     while(numLayers-- > 0) {
         for (int x = 0; x < maxWidth - 32*scale; x += 8) {
             for (int y = 0; y < maxHeight - 32*scale; y += 8) {
@@ -428,6 +630,16 @@ bool Classifier::run_boxscan(IplImage *dst, vector<int> &cluster, vector<CvSURFP
                     }
                     
                     klass5 = min_score < 0 ? max_klass : kOther;
+                    if (klass5 != kOther) {
+                        FoundObject fo;
+                        CObject o;
+                        o.rect = cvRect(x, y, 32*scale, 32*scale);
+                        o.label = classIntToString(klass5);
+                        fo.object = o;
+                        fo.score = min_score;
+                        
+                        newObjects.push_back(fo);
+                    }
                 }
                 
                 cout << "I think it's a ";
@@ -454,6 +666,46 @@ bool Classifier::run_boxscan(IplImage *dst, vector<int> &cluster, vector<CvSURFP
         
         scale *= 1.1;
     }
+    
+    // Possibly add found objects
+    vector<int> toRemove;
+    
+    // prefer lower-scoring
+    for (int i = 0; i < (int)newObjects.size(); ++i) {
+        const CObject &o = newObjects[i].object;
+        for (int j = 0; j < (int)newObjects.size(); ++j) {
+            if (i == j) continue;
+            
+            int overlap = o.overlap(newObjects[j].object);
+            if (overlap > o.rect.width * o.rect.height * 0.3
+                && newObjects[i].score > newObjects[j].score) {
+                toRemove.push_back(i);
+                break;
+            }
+        }
+    }
+    for (int i = 0; i < (int)toRemove.size(); ++i) {
+        newObjects.erase(newObjects.begin() + toRemove[i]);
+    }
+    toRemove.clear();
+    
+    // dont overlap with old objects
+    toRemove.clear();
+    for (int i = 0; i < (int)newObjects.size(); ++i) {
+        const CObject &o = newObjects[i].object;
+        for (int j = 0; j < (int)(*oldObjects).size(); ++j) {
+            int overlap = o.overlap((*oldObjects)[j]);
+            if (overlap > o.rect.width * o.rect.height * 0.3) {
+                toRemove.push_back(i);
+                break;
+            }
+        }
+    }
+    for (int i = 0; i < (int)toRemove.size(); ++i) {
+        newObjects.erase(newObjects.begin() + toRemove[i]);
+    }
+    toRemove.clear();
+    
     return true;
 }
 
