@@ -331,15 +331,13 @@ cout << "desc: " << descriptors->total << endl;
         float *f = new float[SURF_SIZE];
         for (int j = 0; j < SURF_SIZE; ++j) {
             f[j] = desc[where];
+            ++where;
         }
         features.push_back(f);
     }
     printf("Done SURF\n");
 
     printf("Clustering...\n");
-    //cout << centers;
-    //printf("\n");
-    //printf("%d %d\n", centers->rows, centers->cols);
     vector<int> cluster(features.size());
     for (int i = 0; i < (int)features.size(); ++i) {
         float min_distance = INT_MAX;
@@ -349,13 +347,14 @@ cout << "desc: " << descriptors->total << endl;
             for (int j = 0; j < SURF_SIZE; ++j) {
                 dist += pow(features[i][j] - cvGetReal2D(centers, c, j), 2);
             }
-    
+
             if (dist < min_distance) {
                 min_index = c;
                 min_distance = dist;
             }
         }
-
+        
+        cout << min_index << endl;
         cluster[i] = min_index;
     }
     printf("Done clustering...\n");
@@ -392,9 +391,11 @@ bool Classifier::run_boxscan(IplImage *dst, vector<int> &cluster, vector<CvSURFP
                 for (int row = 0; row < (int)newpts.size(); ++row) {
                     int idx = newpts[row];
                     int cluster_idx = cluster[idx];
-
+                    
                     int oldVal = cvGetReal2D(query, 0, cluster_idx);
                     cvSetReal2D(query, 0, cluster_idx, oldVal+1);
+                    
+                    //cout << row << " " << idx << " " << cluster_idx << " " << oldVal << endl;
                 }
         
                 int klass, klass2, klass3, klass4, klass5;
@@ -920,6 +921,8 @@ bool Classifier::train_test(class_feat_vec_star *data, bool verbose)
                 for (int j = 0; j < SURF_SIZE; ++j) {
                     dist += pow(pts[i][j] - cvGetReal2D(centers, c, j), 2);
                 }
+                
+     //           cout << pts[i][0] << " " << cvGetReal2D(centers, c, 0) << " " << dist << endl;
                 
                 if (dist < min_distance) {
                     min_index = c;
