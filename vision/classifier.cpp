@@ -38,7 +38,7 @@
 
 #define LOAD_KMEANS false
 #define SAVE_KMEANS true
-#define LOAD_IPOINTS true
+#define LOAD_IPOINTS false
 #define SAVE_IPOINTS true
 
 // Classifier class ---------------------------------------------------------
@@ -305,15 +305,16 @@ bool Classifier::run(const IplImage *frame, CObjectList *objects, bool scored)
     cvCvtColor(frame, gray, CV_BGR2GRAY);
     
     // Resize by half first, as per the handout.
-    double scale = 2.0;
+    double scale = 1.0;
     IplImage *dst = cvCreateImage(cvSize(gray->width  / scale, gray->height  / scale), gray->depth,  gray->nChannels);
     cvResize(gray, dst);
 
     printf("About to do SURF\n");
     CvSeq *keypoints = 0, *descriptors = 0;
-    CvSURFParams params = cvSURFParams(300, true);
-    cvExtractSURF(dst, 0, &keypoints, &descriptors, storage, params);
+    CvSURFParams params = cvSURFParams(100, SURF_SIZE == 128);
+    cvExtractSURF(gray, 0, &keypoints, &descriptors, storage, params);
     
+cout << "desc: " << descriptors->total << endl;
     if (descriptors->total == 0) return false;
     
     vector<float> desc;
@@ -327,8 +328,8 @@ bool Classifier::run(const IplImage *frame, CObjectList *objects, bool scored)
     vector<feat> features;
     int where = 0;
     for (int pt = 0; pt < keypoints->total; ++pt) {
-        float *f = new float[128];
-        for (int j = 0; j < 128; ++j) {
+        float *f = new float[SURF_SIZE];
+        for (int j = 0; j < SURF_SIZE; ++j) {
             f[j] = desc[where];
         }
         features.push_back(f);
@@ -341,7 +342,7 @@ bool Classifier::run(const IplImage *frame, CObjectList *objects, bool scored)
     //printf("%d %d\n", centers->rows, centers->cols);
     vector<int> cluster(features.size());
     for (int i = 0; i < (int)features.size(); ++i) {
-        double min_distance = DBL_MAX;
+        float min_distance = INT_MAX;
         int min_index = -1;
         for (int c = 0; c < NUM_CLUSTERS; ++c) {
             float dist = 0;
@@ -368,7 +369,7 @@ bool Classifier::run(const IplImage *frame, CObjectList *objects, bool scored)
 
 bool Classifier::run_boxscan(IplImage *dst, vector<int> &cluster, vector<CvSURFPoint> &keypts, vector<feat> &pts)
 {
-    float scale = 2.0f;
+    float scale = 1.0f;
     int maxWidth = dst->width;
     int maxHeight = dst->height;
     
@@ -379,7 +380,8 @@ bool Classifier::run_boxscan(IplImage *dst, vector<int> &cluster, vector<CvSURFP
                 vector<int> newpts;
                 
                 for (int i = 0; i < (int)pts.size(); ++i) {
-                    if (keypts[i].pt.x >= x && keypts[i].pt.x < x + 32*scale && keypts[i].pt.y >= y && keypts[i].pt.y < y + 32*scale)
+                    if (keypts[i].pt.x >= x && keypts[i].pt.x < x + 32*scale 
+                        && keypts[i].pt.y >= y && keypts[i].pt.y < y + 32*scale)
                         newpts.push_back(i);
                 }
                 
@@ -403,16 +405,28 @@ bool Classifier::run_boxscan(IplImage *dst, vector<int> &cluster, vector<CvSURFP
                 if (KNN_ON)   klass3 = knn.find_nearest(query, 5);
                 if (RTREE_ON) klass4 = rtree.predict(query);
                 if (ALL_TREES_ON) {
+                    cout << "avg: " << cvAvg(query).val[0] << endl;
+                    
                     for (int klass = 0; klass < kNumObjectTypes - 1; ++klass) {
                         int length = cvSliceLength(CV_WHOLE_SEQ, trees[klass].get_weak_predictors());
                         CvMat *weakResponses = cvCreateMat(length, 1, CV_32FC1);
                         klass5 = trees[klass].predict(query, NULL, weakResponses, CV_WHOLE_SEQ);
                         
-                        double score = cvSum(weakResponses).val[0];
-                        scores[klass] = score;
+                        scores[klass] = cvSum(weakResponses).val[0];
                         
-                        cvReleaseMat(&weakResponses);
+                        cout << klass << " " << klass5 << endl;
                     }
+                    
+                    double min_score = 0;
+                    int max_klass = -1;
+                    for (int klass = 0; klass < kNumObjectTypes - 1; ++klass) {
+                        if (scores[klass] < min_score) {
+                            max_klass = klass;
+                            min_score = scores[klass];
+                        }
+                    }
+                    
+                    klass5 = min_score < 0 ? max_klass : kOther;
                 }
                 
                 cout << "I think it's a ";
@@ -428,21 +442,12 @@ bool Classifier::run_boxscan(IplImage *dst, vector<int> &cluster, vector<CvSURFP
                     cout << endl;
                 }
                 cout << endl;
-                
-                double max_score = 0;
-                int max_klass = -1;
-                for (int klass = 0; klass < kNumObjectTypes - 1; ++klass) {
-                    if (scores[klass] > max_score) {
-                        max_klass = klass;
-                        max_score = scores[klass];
-                    }
-                }    
         
                 CObject o;
                 o.rect = cvRect(x, y, 32*scale, 32*scale);
-                o.label = classIntToString(max_klass);
+                o.label = classIntToString(klass5);
         
-                showRect(dst, &o, &keypts);
+             //   showRect(dst, &o, &keypts);
             }
         }
         
@@ -542,7 +547,7 @@ bool Classifier::train(TTrainingFileList& fileList, const char *trainingFile)
     for (int i = 0; i < (int)allImages.size(); ++i) indexes.push_back(i);
     random_shuffle ( indexes.begin(), indexes.end() );
     
-    int size = (int)((double)allImages.size() * 1.0);
+    int size = (int)((double)allImages.size() * 0.8);
     trainSet = new class_feat_vec_star();
     testSet = new class_feat_vec_star();
     
@@ -618,7 +623,7 @@ bool Classifier::train(TTrainingFileList& fileList, const char *trainingFile)
     }
     printf(" Saved!\n");
     
-    train_test(trainSet, false);
+    //train_test(trainSet, false);
     train_test(testSet, true);
     
     return true;
@@ -958,12 +963,15 @@ bool Classifier::train_test(class_feat_vec_star *data, bool verbose)
         if (SVM_ON) logResult(svm_results, klass2, trueClass);
         if (KNN_ON) logResult(knn_results, klass3, trueClass);
         if (RTREE_ON) logResult(rtree_results, klass4, trueClass);
+        //cout << ALL_TREES_ON << "*" << endl;
         if (ALL_TREES_ON) {
-
+            cout << "avg: " << cvAvg(query).val[0] << endl;
             for (int klass = 0; klass < kNumObjectTypes - 1; ++klass) {
                 int length = cvSliceLength(CV_WHOLE_SEQ, trees[klass].get_weak_predictors());
                 CvMat *weakResponses = cvCreateMat(length, 1, CV_32FC1);
                 klass5 = trees[klass].predict(query, NULL, weakResponses, CV_WHOLE_SEQ);
+                
+                //cout << klass5 << "**" << endl;
                 
                 double score = cvSum(weakResponses).val[0];
                 scores[klass] = score;
@@ -971,16 +979,17 @@ bool Classifier::train_test(class_feat_vec_star *data, bool verbose)
                 cvReleaseMat(&weakResponses);
             }
                          
-            double max_score = 0;
+            double min_score = 0;
             int max_klass = -1;
             for (int klass = 0; klass < kNumObjectTypes - 1; ++klass) {
-                if (scores[klass] > max_score) {
+                if (scores[klass] < min_score) {
                     max_klass = klass;
-                    max_score = scores[klass];
+                    min_score = scores[klass];
                 }
             }
             
-            logResult(alltrees_results, max_score > 1 ? max_klass : kOther, trueClass);
+            klass5 = min_score < 0 ? max_klass : kOther;
+            logResult(alltrees_results, klass5, trueClass);
         }
         
         if (verbose) {
@@ -990,7 +999,7 @@ bool Classifier::train_test(class_feat_vec_star *data, bool verbose)
             if (KNN_ON)   printf(" %s (knn)!", classIntToString(klass3).c_str());
             if (RTREE_ON)   printf(" %s (rtree)!", classIntToString(klass4).c_str());
             if (ALL_TREES_ON) { 
-                    cout << "\ntrees: ";
+                    cout << "\ntrees: " << classIntToString(klass5) << endl;
                 for (int klass = 0; klass < kNumObjectTypes - 1; ++klass) {
                     cout << classIntToString(klass) << " (" << scores[klass] << ") ";
                 }
@@ -1029,7 +1038,7 @@ bool Classifier::extract(TTrainingFileList& fileList, const char *featuresFile)
 
     IplImage *image;
     
-    int maxOther = 1000;
+    int maxOther = 4000;
     int maxImages = INT_MAX;
 
     cout << "Processing images..." << endl;
@@ -1080,7 +1089,7 @@ bool Classifier::extract(TTrainingFileList& fileList, const char *featuresFile)
             // corner_count,
             // cvSize(10, 10),
             // cvSize(-1, -1),
-            // cvTermCriteria(CV_TERMCRIT_ITER|CV_TERMCRIT_EPS,20,0.03)
+            // cvTermCriteria(CV_TERMCRIT_ITER+CV_TERMCRIT_EPS,20,0.03)
         // );
     
         // CvMat *pts = cvCreateMat(corner_count, 2, CV_32F);
@@ -1089,16 +1098,55 @@ bool Classifier::extract(TTrainingFileList& fileList, const char *featuresFile)
             // CV_MAT_ELEM(*pts, float, row, 1) = cornersA[row].y;
         // }
         
+        // points.push_back(pts);
+        
+        // CvMat *cvhomog = cvCreateMat(3, 3, CV_32F);
+        // const double MAX_ERR = 10;
+        // int best = -1;
+        // double bestscore = DBL_MAX;
+        // for (int j = 0; j < (int)points.size() - 1; ++j) {
+            // int tries = 10;
+            // double error = DBL_MAX;
+            // CvMat *otherpts = points[j];
+            // int max_pts = min(pts->rows, otherpts->rows);
+            // if (max_pts < 8) continue;
+            
+            // vector<int> which1(max_pts), which2(max_pts);
+            // for (int k = 0; k < max_pts; ++k) which1[k] = which2[k] = k;
+            // while(error > MAX_ERR && --tries > 0) {
+                // int choose = 8 + rand() % (max_pts - 8);
+                // CvMat *newpts1 = cvCreateMat(choose, 2, CV_32F);
+                // CvMat *newpts2 = cvCreateMat(choose, 2, CV_32F);
+
+                // random_shuffle(which1.begin(), which1.end());
+                // random_shuffle(which2.begin(), which2.end());
+                
+                // for (int k = 0; k < choose; ++k) {
+                    // CV_MAT_ELEM(*newpts1, float, k, 0) = CV_MAT_ELEM(*pts, float, which1[k], 0);
+                    // CV_MAT_ELEM(*newpts1, float, k, 1) = CV_MAT_ELEM(*pts, float, which1[k], 1);
+                    // CV_MAT_ELEM(*newpts2, float, k, 0) = CV_MAT_ELEM(*otherpts, float, which2[k], 0);
+                    // CV_MAT_ELEM(*newpts2, float, k, 1) = CV_MAT_ELEM(*otherpts, float, which2[k], 1);
+                // }
+                
+                // cvFindHomography(newpts1, newpts2, cvhomog, CV_RANSAC, 2);
+                
+                // if (abs(cvAvg(cvhomog).val[0]) < bestscore) {
+                    // best = j;
+                    // bestscore = abs(cvAvg(cvhomog).val[0]);
+                // }
+            // }
+        // }
+        
+       // cout << "best: " << best << endl;
         // Homography h;
         // CvMat *homog = h.compute(pts, pts);
         // cvReleaseMat(&pts);
         
         // cout << cvAvg(homog).val[0] << endl;
         
-        // CvMat *cvhomog = cvCreateMat(3, 3, CV_32F);
-        
-        // cvFindHomography(pts, pts, cvhomog, CV_RANSAC, 2);
-        // cout << cvAvg(cvhomog).val[0] << endl;
+        //CvMat *cvhomog = cvCreateMat(3, 3, CV_32F);
+        //cvFindHomography(pts, pts, cvhomog, CV_RANSAC, 2);
+        //cout << cvAvg(cvhomog).val[0] << endl;
         
         string label = fileList.files[i].label;
 

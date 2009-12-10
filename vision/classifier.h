@@ -35,8 +35,8 @@
 /* Classifier class ---------------------------------------------------------
  */
 
-#define NUM_CLUSTERS    5000
-#define MIN_IPOINTS     15
+#define NUM_CLUSTERS    500
+#define MIN_IPOINTS     5
 #define SURF_SIZE       128
  
 enum ObjectTypes {
@@ -73,7 +73,7 @@ protected:
     
     vector< pair<string, int> > surfThresh;
     map<string, int> surfTotal;
-    
+    vector<CvMat *> points;
     
     int surfTotalIpoints;
     
