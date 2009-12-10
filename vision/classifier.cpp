@@ -381,7 +381,7 @@ bool Classifier::run(const IplImage *frame, CObjectList *objects, bool scored)
         (*objects)[i].rect.y -= totalYDiff * 10;
     }
     
-    cout << "Flow: " totalXDiff << " " << totalYDiff << endl;
+    cout << "Flow: " << totalXDiff << " " << totalYDiff << endl;
     totalYDiff = 0;
     totalXDiff = 0;
     
