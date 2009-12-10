@@ -305,14 +305,14 @@ bool Classifier::run(const IplImage *frame, CObjectList *objects, bool scored)
     cvCvtColor(frame, gray, CV_BGR2GRAY);
     
     // Resize by half first, as per the handout.
-    double scale = 1.0;
+    double scale = 2.0;
     IplImage *dst = cvCreateImage(cvSize(gray->width  / scale, gray->height  / scale), gray->depth,  gray->nChannels);
     cvResize(gray, dst);
 
     printf("About to do SURF\n");
     CvSeq *keypoints = 0, *descriptors = 0;
     CvSURFParams params = cvSURFParams(100, SURF_SIZE == 128);
-    cvExtractSURF(gray, 0, &keypoints, &descriptors, storage, params);
+    cvExtractSURF(dst, 0, &keypoints, &descriptors, storage, params);
     
 cout << "desc: " << descriptors->total << endl;
     if (descriptors->total == 0) return false;
@@ -368,7 +368,7 @@ cout << "desc: " << descriptors->total << endl;
 
 bool Classifier::run_boxscan(IplImage *dst, vector<int> &cluster, vector<CvSURFPoint> &keypts, vector<feat> &pts)
 {
-    float scale = 1.0f;
+    float scale = 2.0f;
     int maxWidth = dst->width;
     int maxHeight = dst->height;
     
