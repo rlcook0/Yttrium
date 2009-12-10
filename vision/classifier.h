@@ -35,7 +35,7 @@
 /* Classifier class ---------------------------------------------------------
  */
 
-#define NUM_CLUSTERS    30
+#define NUM_CLUSTERS    1000
 #define MIN_IPOINTS     15
 #define SURF_SIZE       128
  
@@ -125,6 +125,6 @@ public:
 
 private:
     
-    bool showRect(IplImage *, CObject *, const vector<Ipoint> *);
+    bool showRect(IplImage *, CObject *, const vector<CvSURFPoint> *);
 };
 

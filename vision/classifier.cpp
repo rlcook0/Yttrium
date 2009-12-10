@@ -33,6 +33,7 @@
 #define KNN_ON true
 #define RTREE_ON true
 #define MUGTREE_ON true
+#define ALL_TREES_ON false
 
 #define LOAD_KMEANS false
 #define SAVE_KMEANS true
@@ -245,7 +246,7 @@ CvMat *normalize(const CvMat* vector) {
 }
 
 // TESTING ONLY
-bool Classifier::showRect(IplImage *image, CObject *rect, const vector<feat> *pts = NULL) {
+bool Classifier::showRect(IplImage *image, CObject *rect, const vector<CvSURFPoint> *pts = NULL) {
     //char *WINDOW_NAME = "test";
     CvFont font;
 
@@ -259,8 +260,8 @@ bool Classifier::showRect(IplImage *image, CObject *rect, const vector<feat> *pt
         CvScalar color = CV_RGB(255, 255, 255);
         for (int i = 0; i < (int)pts->size(); ++i) {
             //printf("(%f %f)->(%d %d) ", (*pts)[i].x, (*pts)[i].y, frameCopy->width, frameCopy->height);
-            cvRectangle(frameCopy, cvPoint((*pts)[i].x, (*pts)[i].y), 
-                cvPoint((*pts)[i].x + 3, (*pts)[i].y + 3), color);
+            cvRectangle(frameCopy, cvPoint((*pts)[i].pt.x, (*pts)[i].pt.y), 
+                cvPoint((*pts)[i].pt.x + 3, (*pts)[i].pt.y + 3), color);
         }
     }
     
@@ -461,7 +462,7 @@ bool Classifier::run_boxscan(IplImage *dst, vector<int> &cluster, vector<CvSURFP
                 o.rect = cvRect(x, y, 32*scale, 32*scale);
                 o.label = classIntToString(klass2);
         
-                showRect(dst, &o);
+                showRect(dst, &o, &keypts);
             }
         }
         
@@ -762,8 +763,8 @@ bool Classifier::train_rtree(CvMat *desc, CvMat *responses)
     
     CvRTParams params( 
         5,                                 //Max depth 
-        2,                                  //Min sample count 
-        0,                              //Regression accuracy 
+        2,                                 //Min sample count 
+        0,                                 //Regression accuracy 
         false,                              //Use Surrogates 
         10,                                 //Max Categories 
         NULL,                               //Priors  
@@ -831,9 +832,9 @@ bool Classifier::train_mugtree(CvMat *desc, CvMat *responses)
     
     CvBoostParams params( 
         CvBoost::REAL, 
-        400, 
+        100, 
         0.95, 
-        5, 
+        2, 
         false, 
         NULL 
     );
