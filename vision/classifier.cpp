@@ -34,10 +34,12 @@
 #define RTREE_ON false
 #define ALL_TREES_ON true
 
-#define LOAD_KMEANS true
-#define SAVE_KMEANS false
-#define LOAD_IPOINTS true
-#define SAVE_IPOINTS true
+#define LOAD_KMEANS false
+#define SAVE_KMEANS true
+#define LOAD_IPOINTS false
+#define SAVE_IPOINTS false
+
+#define CORNERS_ON true
 
 // Classifier class ---------------------------------------------------------
  
@@ -1029,6 +1031,9 @@ bool Classifier::extract(TTrainingFileList& fileList, const char *featuresFile)
     
     int maxOther = 2000;
     int maxImages = INT_MAX;
+    
+    int pruned = 0;
+    int kept = 0;
 
     cout << "Processing images..." << endl;
 
@@ -1103,14 +1108,23 @@ bool Classifier::extract(TTrainingFileList& fileList, const char *featuresFile)
                 ++where;
             }
             
+            if (!CORNERS_ON) {
+                features.push_back(f);
+                continue;
+            }
+
+            pruned++;
             for (int c = 0; c < corner_count; c++)
             {
                 if (fabs(keypts[pt].pt.x - corners[c].x) < DIST_THRESH 
                  && fabs(keypts[pt].pt.y - corners[c].y) < DIST_THRESH)
                  {
+                     pruned--;
+                     kept++;
                      features.push_back(f);
                      break;
                  }
+                 
             }
         }
         
@@ -1118,6 +1132,8 @@ bool Classifier::extract(TTrainingFileList& fileList, const char *featuresFile)
     }
     
     cout << endl << "Extracted surf features: " << endl;
+    cout << endl << "Pruned: " << pruned << " Kept: " << kept << endl;
+    
 
     return true;
 }
