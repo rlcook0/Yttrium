@@ -29,14 +29,14 @@
 #include "logreg.h"
 
 #define BAYES_ON false
-#define SVM_ON true
+#define SVM_ON false
 #define KNN_ON false
-#define RTREE_ON true
-#define MUGTREE_ON false
+#define RTREE_ON false
+#define ALL_TREES_ON true
 
-#define LOAD_KMEANS false
-#define SAVE_KMEANS true
-#define LOAD_IPOINTS false
+#define LOAD_KMEANS true
+#define SAVE_KMEANS false
+#define LOAD_IPOINTS true
 #define SAVE_IPOINTS true
 
 // Classifier class ---------------------------------------------------------
@@ -47,6 +47,8 @@ Classifier::Classifier()
     // initalize the random number generator (for sample code)
     rng = cvRNG(-1);
     //srand(time(NULL));
+ 
+    storage = cvCreateMemStorage(0);
  
     //centers = NULL;
  
@@ -71,10 +73,25 @@ bool Classifier::loadState(const char *filename)
 
     if (BAYES_ON) bayes.load("bayes.dat");
     if (SVM_ON)   svm.load("svm.dat");
-    if (KNN_ON)   knn.load("knn.dat");
+    
+    if (KNN_ON)   
+    {
+        CvMat *desc = (CvMat *)cvLoad("desc.dat");
+        CvMat *responses = (CvMat *)cvLoad("responses.dat");
+        knn.train(desc, responses);
+    }
     if (RTREE_ON) rtree.load("rtree.dat");
+    if (ALL_TREES_ON) {
+        for (int i = 0; i < kNumObjectTypes - 1; ++i) {
+            stringstream filename;
+            filename << "trees" << i << ".dat";
+            trees[i].load(filename.str().c_str());
+        }
+    }
     centers = (CvMat *)cvLoad("centers.dat");
         
+    assert(centers != NULL);    
+    
     //loadSURFFile(filename);
     //setupKDTree();
     
@@ -111,7 +128,7 @@ bool Classifier::saveSURFFile(const char *filename)
         {
             Ipoint i = (it->second)[j];
             outfile << i.x << " " << i.y << " " << i.scale << " " << i.orientation << " " << i.laplacian << " ";
-            for (unsigned k = 0; k < 64; k++)
+            for (unsigned k = 0; k < SURF_SIZE; k++)
                 outfile << i.descriptor[k] << " ";
             outfile << endl;
         }
@@ -150,7 +167,7 @@ bool Classifier::loadSURFFile(const char *filename)
         {
             Ipoint i;
             infile >> i.x >> i.y >> i.scale >> i.orientation >> i.laplacian;
-            for (int k = 0; k < 64; k++)
+            for (int k = 0; k < SURF_SIZE; k++)
                 infile >> i.descriptor[k];
             
             v.push_back(i);   
@@ -180,7 +197,7 @@ bool Classifier::loadSURFFile(const char *filename)
 
 bool Classifier::setupKDTree()
 {
-    CvMat *desc = cvCreateMat(surfTotalIpoints, 64, CV_32FC1);
+    CvMat *desc = cvCreateMat(surfTotalIpoints, SURF_SIZE, CV_32FC1);
 
     int where = 0;
     for (map<string, vector<Ipoint> >::const_iterator it = surfFeatures.begin(); it != surfFeatures.end(); ++it) {
@@ -188,7 +205,7 @@ bool Classifier::setupKDTree()
         for (unsigned i = 0; i < it->second.size(); ++i) {
             const Ipoint *ipt = &((*pts)[i]);
             const float *vals = ipt->descriptor;
-            for (int j = 0; j < 64; ++j) {
+            for (int j = 0; j < SURF_SIZE; ++j) {
                 //printf(" (%d %d %f)", where, j, vals[j]);
                 cvSetReal2D(desc, where, j, vals[j]);
             }
@@ -234,7 +251,7 @@ CvMat *normalize(const CvMat* vector) {
 }
 
 // TESTING ONLY
-bool Classifier::showRect(IplImage *image, CObject *rect, const vector<Ipoint> *pts = NULL) {
+bool Classifier::showRect(IplImage *image, CObject *rect, const vector<CvSURFPoint> *pts = NULL) {
     //char *WINDOW_NAME = "test";
     CvFont font;
 
@@ -247,15 +264,14 @@ bool Classifier::showRect(IplImage *image, CObject *rect, const vector<Ipoint> *
     if (pts != NULL) {
         CvScalar color = CV_RGB(255, 255, 255);
         for (int i = 0; i < (int)pts->size(); ++i) {
-            
-            cvRectangle(image, cvPoint((*pts)[i].x, (*pts)[i].y), 
-                cvPoint((*pts)[i].x + 3, (*pts)[i].y + 3), color);
+            //printf("(%f %f)->(%d %d) ", (*pts)[i].x, (*pts)[i].y, frameCopy->width, frameCopy->height);
+            cvRectangle(frameCopy, cvPoint((*pts)[i].pt.x, (*pts)[i].pt.y), 
+                cvPoint((*pts)[i].pt.x + 3, (*pts)[i].pt.y + 3), color);
         }
     }
     
     rect->draw(frameCopy, CV_RGB(255, 0, 255), &font);
-    
-    
+        
     cvShowImage("test", frameCopy);
     cvReleaseImage(&frameCopy);
 
@@ -273,6 +289,8 @@ bool Classifier::run(const IplImage *frame, CObjectList *objects, bool scored)
     if (!scored)
         return true;
     
+    assert(centers != NULL);
+    
     cout << "--------------------------------------" << endl;
     cout << "\t\tRun" << endl;
     
@@ -285,25 +303,48 @@ bool Classifier::run(const IplImage *frame, CObjectList *objects, bool scored)
     cvCvtColor(frame, gray, CV_BGR2GRAY);
     
     // Resize by half first, as per the handout.
-    double scale = 1.0;
+    double scale = 2.0;
     IplImage *dst = cvCreateImage(cvSize(gray->width  / scale, gray->height  / scale), gray->depth,  gray->nChannels);
     cvResize(gray, dst);
 
     printf("About to do SURF\n");
-    std::vector<Ipoint> pts;
-    surfDetDes(dst, pts, false);
+    CvSeq *keypoints = 0, *descriptors = 0;
+    CvSURFParams params = cvSURFParams(300, true);
+    cvExtractSURF(dst, 0, &keypoints, &descriptors, storage, params);
+    
+    if (descriptors->total == 0) return false;
+    
+    vector<float> desc;
+    desc.resize(descriptors->total * descriptors->elem_size/sizeof(float));
+    cvCvtSeqToArray(descriptors, &desc[0]);
+    
+    vector<CvSURFPoint> keypts;
+    keypts.resize(keypoints->total);
+    cvCvtSeqToArray(keypoints, &keypts[0]);
+    
+    vector<feat> features;
+    int where = 0;
+    for (int pt = 0; pt < keypoints->total; ++pt) {
+        float *f = new float[128];
+        for (int j = 0; j < 128; ++j) {
+            f[j] = desc[where];
+        }
+        features.push_back(f);
+    }
     printf("Done SURF\n");
 
     printf("Clustering...\n");
-    
-    vector<int> cluster(pts.size());
-    for (int i = 0; i < (int)pts.size(); ++i) {
+    //cout << centers;
+    //printf("\n");
+    //printf("%d %d\n", centers->rows, centers->cols);
+    vector<int> cluster(features.size());
+    for (int i = 0; i < (int)features.size(); ++i) {
         double min_distance = DBL_MAX;
         int min_index = -1;
         for (int c = 0; c < NUM_CLUSTERS; ++c) {
             float dist = 0;
-            for (int j = 0; j < 64; ++j) {
-                dist += pow(pts[i].descriptor[j] - cvGetReal2D(centers, c, j), 2);
+            for (int j = 0; j < SURF_SIZE; ++j) {
+                dist += pow(features[i][j] - cvGetReal2D(centers, c, j), 2);
             }
     
             if (dist < min_distance) {
@@ -314,35 +355,34 @@ bool Classifier::run(const IplImage *frame, CObjectList *objects, bool scored)
 
         cluster[i] = min_index;
     }
-    
     printf("Done clustering...\n");
     
-    run_boxscan(dst, cluster, pts);
+    run_boxscan(dst, cluster, keypts, features);
 
     cvReleaseImage(&gray);
     return true;
 }
 
 
-bool Classifier::run_boxscan(IplImage *dst, vector<int> &cluster, vector<Ipoint> &pts)
+bool Classifier::run_boxscan(IplImage *dst, vector<int> &cluster, vector<CvSURFPoint> &keypts, vector<feat> &pts)
 {
-    float scale = 4.0f;
+    float scale = 2.0f;
     int maxWidth = dst->width;
     int maxHeight = dst->height;
     
-    CvMat *votes;
-    int numLayers = 7;
+    int numLayers = 10;
     while(numLayers-- > 0) {
-        for (int x = 0; x < maxWidth - 32*scale; x += 8 * scale) {
-            for (int y = 0; y < maxHeight - 32*scale; y += 8 * scale) {
-                std::vector<int> newpts;
+        for (int x = 0; x < maxWidth - 32*scale; x += 8) {
+            for (int y = 0; y < maxHeight - 32*scale; y += 8) {
+                vector<int> newpts;
+                
                 for (int i = 0; i < (int)pts.size(); ++i) {
-                    if (pts[i].x >= x && pts[i].x < x + 32*scale && pts[i].y >= y && pts[i].y < y + 32*scale)
+                    if (keypts[i].pt.x >= x && keypts[i].pt.x < x + 32*scale && keypts[i].pt.y >= y && keypts[i].pt.y < y + 32*scale)
                         newpts.push_back(i);
                 }
-        
+                
                 if (newpts.size() < MIN_IPOINTS) continue;
-        
+
                 CvMat *query = cvCreateMat(1, NUM_CLUSTERS, CV_32FC1);
                 cvSet(query, cvScalar(0));
                 for (int row = 0; row < (int)newpts.size(); ++row) {
@@ -353,31 +393,58 @@ bool Classifier::run_boxscan(IplImage *dst, vector<int> &cluster, vector<Ipoint>
                     cvSetReal2D(query, 0, cluster_idx, oldVal+1);
                 }
         
-                int klass, klass2, klass3, klass4;
+                int klass, klass2, klass3, klass4, klass5;
+                double scores[kNumObjectTypes - 1];
                 
                 if (BAYES_ON) klass = bayes.predict(query);
                 if (SVM_ON)   klass2 = svm.predict(query);
                 if (KNN_ON)   klass3 = knn.find_nearest(query, 5);
                 if (RTREE_ON) klass4 = rtree.predict(query);
+                if (ALL_TREES_ON) {
+                    for (int klass = 0; klass < kNumObjectTypes - 1; ++klass) {
+                        int length = cvSliceLength(CV_WHOLE_SEQ, trees[klass].get_weak_predictors());
+                        CvMat *weakResponses = cvCreateMat(length, 1, CV_32FC1);
+                        klass5 = trees[klass].predict(query, NULL, weakResponses, CV_WHOLE_SEQ);
+                        
+                        double score = cvSum(weakResponses).val[0];
+                        scores[klass] = score;
+                        
+                        cvReleaseMat(&weakResponses);
+                    }
+                }
                 
                 cout << "I think it's a ";
                 if (BAYES_ON) cout << classIntToString(klass) << "(bayes) ";
                 if (SVM_ON)   cout << classIntToString(klass2) << "(svm) ";
                 if (KNN_ON)   cout << classIntToString(klass3) << "(knn) ";
-                if (KNN_ON)   cout << classIntToString(klass4) << "(rtree) ";
+                if (RTREE_ON) cout << classIntToString(klass4) << "(rtree) ";
+                if (ALL_TREES_ON) { 
+                    cout << "\ntrees: ";
+                    for (int klass = 0; klass < kNumObjectTypes - 1; ++klass) {
+                        cout << classIntToString(klass) << " (" << scores[klass] << ") ";
+                    }
+                    cout << endl;
+                }
                 cout << endl;
-                        
-                cvResetImageROI(dst);
+                
+                double max_score = 0;
+                int max_klass = -1;
+                for (int klass = 0; klass < kNumObjectTypes - 1; ++klass) {
+                    if (scores[klass] > max_score) {
+                        max_klass = klass;
+                        max_score = scores[klass];
+                    }
+                }    
         
                 CObject o;
-                o.rect = cvRect(x, y, 32 * scale, 32 * scale);;
-                o.label = classIntToString(klass4);
+                o.rect = cvRect(x, y, 32*scale, 32*scale);
+                o.label = classIntToString(max_klass);
         
-                showRect(dst, &o, &pts);
+                showRect(dst, &o, &keypts);
             }
         }
         
-        scale *= 1.2;
+        scale *= 1.1;
     }
     return true;
 }
@@ -408,64 +475,64 @@ bool Classifier::train(TTrainingFileList& fileList, const char *trainingFile)
 
     if (!LOAD_IPOINTS || !FileExists("/tmp/surf/num_images")) {
         extract(fileList, trainingFile);
-    } else {
-        int numImages;
+    // } else {
+        // int numImages;
         
-        ifstream num;
-        num.open("/tmp/surf/num_images");
-        num >> numImages;
-        num.close();
+        // ifstream num;
+        // num.open("/tmp/surf/num_images");
+        // num >> numImages;
+        // num.close();
         
-        printf("Loading %d saved images...\n", numImages);
+        // printf("Loading %d saved images...\n", numImages);
         
-        surfTotalIpoints = 0;
-        for (int i = 0; i < numImages; ++i) {
-            showProgress(i, numImages);
-            char klassfn[50], datfn[50];
-            sprintf(klassfn, "/tmp/surf/img%d.klass", i);
-            sprintf(datfn, "/tmp/surf/img%d.dat", i);
+        // surfTotalIpoints = 0;
+        // for (int i = 0; i < numImages; ++i) {
+            // showProgress(i, numImages);
+            // char klassfn[50], datfn[50];
+            // sprintf(klassfn, "/tmp/surf/img%d.klass", i);
+            // sprintf(datfn, "/tmp/surf/img%d.dat", i);
             
-            string klass;
+            // string klass;
             
-            ifstream klassf;
-            klassf.open(klassfn);
-            klassf >> klass;
-            klassf.close();
+            // ifstream klassf;
+            // klassf.open(klassfn);
+            // klassf >> klass;
+            // klassf.close();
             
-            vector<Ipoint> pts;
-            loadSurf(datfn, pts);
+            // vector<Ipoint> pts;
+            // loadSurf(datfn, pts);
             
-            surfTotalIpoints += (int)pts.size();
+            // surfTotalIpoints += (int)pts.size();
             
-            allImages.push_back(pair<string, vector<Ipoint> >(klass, pts));
-        }
+            // allImages.push_back(pair<string, vector<Ipoint> >(klass, pts));
+        // }
         
-        printf("Done!\n");
+        // printf("Done!\n");
     }
     
-    if (!LOAD_IPOINTS && SAVE_IPOINTS) {
-        printf("Saving %d images...\n", (int)allImages.size());
-        for (int i = 0; i < (int)allImages.size(); ++i) {
-            showProgress(i, (int)allImages.size());
+    // if (!LOAD_IPOINTS && SAVE_IPOINTS) {
+        // printf("Saving %d images...\n", (int)allImages.size());
+        // for (int i = 0; i < (int)allImages.size(); ++i) {
+            // showProgress(i, (int)allImages.size());
             
-            char klassfn[50], datfn[50];
-            sprintf(klassfn, "/tmp/surf/img%d.klass", i);
-            sprintf(datfn, "/tmp/surf/img%d.dat", i);
+            // char klassfn[50], datfn[50];
+            // sprintf(klassfn, "/tmp/surf/img%d.klass", i);
+            // sprintf(datfn, "/tmp/surf/img%d.dat", i);
             
-            saveSurf(datfn, allImages[i].second);
+            // saveSurf(datfn, allImages[i].second);
             
-            ofstream klass;
-            klass.open(klassfn);
-            klass << allImages[i].first;
-            klass.close();
-        }
+            // ofstream klass;
+            // klass.open(klassfn);
+            // klass << allImages[i].first;
+            // klass.close();
+        // }
         
-        ofstream num;
-        num.open("/tmp/surf/num_images");
-        num << (int)allImages.size();
-        num.close();
-        printf("Done!\n");
-    }
+        // ofstream num;
+        // num.open("/tmp/surf/num_images");
+        // num << (int)allImages.size();
+        // num.close();
+        // printf("Done!\n");
+    // }
     
     // make folds
     cout << "making folds..." << endl;
@@ -474,8 +541,8 @@ bool Classifier::train(TTrainingFileList& fileList, const char *trainingFile)
     random_shuffle ( indexes.begin(), indexes.end() );
     
     int size = (int)((double)allImages.size() * 0.8);
-    trainSet = new vector<pair<string, vector<Ipoint> > >();
-    testSet = new vector<pair<string, vector<Ipoint> > >();
+    trainSet = new class_feat_vec_star();
+    testSet = new class_feat_vec_star();
     
     int trainTypes[kNumObjectTypes], testTypes[kNumObjectTypes];
     for(int i = 0; i < kNumObjectTypes; ++i)
@@ -485,10 +552,10 @@ bool Classifier::train(TTrainingFileList& fileList, const char *trainingFile)
         int real = indexes[i];
         if (i < size) {
             trainTypes[stringToClassInt(allImages[real].first)] += 1;
-            trainSet->push_back(allImages[real]);
+            trainSet->push_back(&(allImages[real]));
         } else {
             testTypes[stringToClassInt(allImages[real].first)] += 1;
-            testSet->push_back(allImages[real]);
+            testSet->push_back(&(allImages[real]));
         }
     }
     
@@ -508,8 +575,8 @@ bool Classifier::train(TTrainingFileList& fileList, const char *trainingFile)
         cout << "massaging responses..." << endl;
         for (int i = 0; i < (int)trainSet->size(); ++i) 
         {
-            int klass = stringToClassInt((*trainSet)[i].first);
-            cvSetReal2D(responses, i, 0, klass);
+            int klass = stringToClassInt((*trainSet)[i]->first);
+            cvSetReal1D(responses, i, klass);
         }
 
         train_kmeans(desc);
@@ -533,13 +600,20 @@ bool Classifier::train(TTrainingFileList& fileList, const char *trainingFile)
     train_svm(desc, responses);
     train_knn(desc, responses);
     train_rtree(desc, responses);
-    train_mugtree(desc, responses);
+    train_alltrees(desc, responses);
     
     printf("Saving classifiers...");
     if (BAYES_ON) bayes.save("bayes.dat");
     if (SVM_ON) svm.save("svm.dat");
-    if (KNN_ON) knn.save("knn.dat");
+    //if (KNN_ON) knn.save("knn.dat");
     if (RTREE_ON) rtree.save("rtree.dat");
+    if (ALL_TREES_ON) {
+        for (int i = 0; i < kNumObjectTypes - 1; ++i) {
+            stringstream filename;
+            filename << "trees" << i << ".dat";
+            trees[i].save(filename.str().c_str());
+        }
+    }
     printf(" Saved!\n");
     
     train_test(trainSet, false);
@@ -558,25 +632,29 @@ bool Classifier::train_kmeans(CvMat *desc)
     
     int trainIpoints = 0;
     for (int i = 0; i < (int)trainSet->size(); ++i) {
-        trainIpoints += (*trainSet)[i].second.size();
+        trainIpoints += (*trainSet)[i]->second.size();
     }
     
-    CvMat *all_desc = cvCreateMat(trainIpoints, 64, CV_32FC1);
+    printf("We have %d ipoints\n", trainIpoints);
+    
+    CvMat *all_desc = cvCreateMat(trainIpoints, SURF_SIZE, CV_32FC1);
     int where = 0;
     for (int i = 0; i < (int)trainSet->size(); ++i) {
-        for (int iptNo = 0; iptNo < (int)(*trainSet)[i].second.size(); ++iptNo) {
-            Ipoint *pt = &((*trainSet)[i].second[iptNo]);
-            for (int j = 0; j < 64; ++j) {
-                cvSetReal2D(all_desc, where, j, pt->descriptor[j]);
+        for (int iptNo = 0; iptNo < (int)(*trainSet)[i]->second.size(); ++iptNo) {
+            float *pt = (*trainSet)[i]->second[iptNo];
+            for (int j = 0; j < SURF_SIZE; ++j) {
+                cvSetReal2D(all_desc, where, j, pt[j]);
             }
             ++where;
         }
     }
     
+    printf("We used %d of them\n", where);
+    
     cout << "kmeans starting..." << endl;
     
     CvMat *clusters = cvCreateMat(trainIpoints, 1, CV_32SC1);
-    centers = cvCreateMat(NUM_CLUSTERS, 64, CV_32FC1);
+    centers = cvCreateMat(NUM_CLUSTERS, SURF_SIZE, CV_32FC1);
     cvKMeans2(
         all_desc,       // samples
         NUM_CLUSTERS,   // clusters
@@ -584,7 +662,7 @@ bool Classifier::train_kmeans(CvMat *desc)
         cvTermCriteria(
             CV_TERMCRIT_EPS|CV_TERMCRIT_ITER, // End criteria
             10,                               // Max iter
-            0.001),                           //accuracy
+            0.1),                             //accuracy
         1,              // attempts
         &rng,           //rng
         0,              // flags
@@ -592,12 +670,14 @@ bool Classifier::train_kmeans(CvMat *desc)
         NULL            // compactness
     };
     
+    cvReleaseMat(&all_desc);
+    
     cout << "creating new descriptors..." << endl;
     
     cvSet(desc, cvRealScalar(0));
     where = 0;
     for(int i = 0; i < (int)(*trainSet).size(); ++i) {
-        for (int iptNo = 0; iptNo < (int)(*trainSet)[i].second.size(); ++iptNo) {
+        for (int iptNo = 0; iptNo < (int)(*trainSet)[i]->second.size(); ++iptNo) {
             int cluster = cvGetReal1D(clusters, where);
             
             //printf("(%d %d)\n", i, cluster);
@@ -605,7 +685,19 @@ bool Classifier::train_kmeans(CvMat *desc)
             cvSetReal2D(desc, i, cluster, oldVal+1);
             ++where;
         }
+        
+        // double sum = 0;
+        // for (int j = 0; j < NUM_CLUSTERS; ++j)
+            // sum += cvGetReal2D(desc, i, j);
+        
+        // for (int j = 0; j < NUM_CLUSTERS; ++j) {
+            // double val = cvGetReal2D(desc, i, j);
+            // double newval = val / sum;
+            // cvSetReal2D(desc, i, j, newval);
+        // }    
     }
+    CvScalar avg = cvAvg(desc);
+    printf("we used %d ipoints in our matrix, for a mean of %f\n", where, avg.val[0]);
     
     cout << "Step Done:  kmeans" << endl; 
     return true;
@@ -656,16 +748,16 @@ bool Classifier::train_rtree(CvMat *desc, CvMat *responses)
     cout << "Step Start: rtree" << endl; 
     
     CvRTParams params( 
-        10,                                 //Max depth 
-        5,                                  //Min sample count 
-        0.01f,                              //Regression accuracy 
+        5,                                 //Max depth 
+        2,                                 //Min sample count 
+        0,                                 //Regression accuracy 
         false,                              //Use Surrogates 
         10,                                 //Max Categories 
         NULL,                               //Priors  
         false,                              //Calculate Variables variance 
         0,                                  //Nactive Vars 
-        300,                                //Max Tree Count 
-        0.00001,                            //Accuracy to archive 
+        500,                                //Max Tree Count 
+        0.1,                            //Accuracy to archive 
         CV_TERMCRIT_EPS|CV_TERMCRIT_ITER    //Criteria to stop algorithm 
     );
     
@@ -706,34 +798,55 @@ bool Classifier::train_rtree(CvMat *desc, CvMat *responses)
     return true;
 }
 
-bool Classifier::train_mugtree(CvMat *desc, CvMat *responses) 
+bool Classifier::train_alltrees(CvMat *desc, CvMat *responses) 
 {
     cout << "------------------------------------------" << endl;
-    cout << "Step Start: mugtree" << endl; 
+    cout << "Step Start: trees" << endl; 
     
-    CvMat *new_responses = cvCreateMat(responses->rows, 1, CV_32SC1);
-    for (int i = 0; i < responses->rows; ++i) {
-        int klass = cvGetReal2D(responses, i, 0);
-        int newKlass = klass == kMug ? kMug : kOther;
-        
-        cvSetReal2D(new_responses, i, 0, newKlass);
-    }
+    if (!ALL_TREES_ON) return false;
     
     CvMat* var_type = cvCreateMat( desc->cols + 1, 1, CV_8U );
-    cvSet( var_type, cvScalarAll(CV_VAR_ORDERED) );
-    cvSetReal1D( var_type, desc->cols, CV_VAR_CATEGORICAL );    
+    for (int j = 0; j < desc->cols; ++j)
+        CV_MAT_ELEM(*var_type, unsigned char, j, 0) = CV_VAR_NUMERICAL;
+    CV_MAT_ELEM(*var_type, unsigned char, desc->cols, 0) = CV_VAR_CATEGORICAL;    
     
-    if (MUGTREE_ON) mugTree.train(
-        desc, 
-        CV_ROW_SAMPLE, 
-        new_responses,
-        0,
-        0,
-        0,
-        0,
-        CvBoostParams( CvBoost::REAL, 100, 0.95, 5, false, 0 )
+    CvBoostParams params( 
+        CvBoost::REAL, 
+        100, 
+        0.95, 
+        2, 
+        false, 
+        NULL 
     );
-    else cout << "MUGTREE is turned off" << endl;
+    params.split_criteria = CvBoost::DEFAULT;    
+    
+    CvMat *new_responses = cvCreateMat(responses->rows, 1, CV_32SC1);
+    for (int klass = 0; klass < kNumObjectTypes - 1; ++klass) {
+        if(klass == kOther) continue;
+        
+        cout << "Training: " << classIntToString(klass) << endl;
+        
+        for (int i = 0; i < responses->rows; ++i) {
+            int this_klass = CV_MAT_ELEM(*responses, int, i, 0);
+            int new_klass = this_klass == klass ? klass : kOther;
+            
+            CV_MAT_ELEM(*new_responses, int, i, 0) = new_klass;
+        }
+        
+        trees[klass].train(
+            desc,               // data
+            CV_ROW_SAMPLE,      // type
+            new_responses,      // responses
+            0,                  //
+            0,                  //
+            var_type,           // var_types
+            0,                  // 
+            params              // params
+        );
+    }
+    
+    //CvReleaseMat(&var_type);
+    //CvReleaseMat(&new_responses);
     
     cout << "Step Done:  mugtree" << endl;
     return true;
@@ -759,12 +872,12 @@ void logResult(int *data, int klass, int trueClass, int targetClass) {
         if (klass == trueClass)
             data[0] += 1;
         else
-            data[2] += 1;
+            data[3] += 1;
     else
         if (klass == trueClass)
             data[1] += 1;
         else
-            data[3] += 1;
+            data[2] += 1;
 }
 
 void printResult(int *data, string name) {
@@ -777,29 +890,28 @@ void printResult(int *data, string name) {
     printf("%s\taccuracy: %f\tprecision: %f\trecall: %f\tfscore: %f\n", name.c_str(), accuracy, precision, recall, fscore);
 }
 
-bool Classifier::train_test(vector<pair<string, vector<Ipoint> > > *data, bool verbose)
+bool Classifier::train_test(class_feat_vec_star *data, bool verbose)
 {
     cout << "------------------------------------------" << endl;
     cout << "Step Start: test" << endl;
     
-    int bayes_results[4], svm_results[4], knn_results[4], rtree_results[4], mugtree_results[4];
+    int bayes_results[4], svm_results[4], knn_results[4], rtree_results[4], alltrees_results[4];
     for (int i = 0; i < 4; ++i)
-        bayes_results[i] = svm_results[i] = knn_results[i] = rtree_results[i] = mugtree_results[i] = 0;
-    
-    int yes = 0, no = 0;
+        bayes_results[i] = svm_results[i] = knn_results[i] = rtree_results[i] = alltrees_results[i] = 0;
+
     cout << "Running " << (int)(*data).size() << " images." << endl;
     for (int img = 0; img < (int)(*data).size(); ++img) {
         showProgress(img, (int)(*data).size());
         
-        vector<Ipoint> pts = (*data)[img].second;
+        vector<feat> pts = (*data)[img]->second;
         vector<int> cluster(pts.size());
         for (int i = 0; i < (int)pts.size(); ++i) {
             float min_distance = INT_MAX;
             int min_index = -1;
             for (int c = 0; c < NUM_CLUSTERS; ++c) {
                 float dist = 0;
-                for (int j = 0; j < 64; ++j) {
-                    dist += pow(pts[i].descriptor[j] - cvGetReal2D(centers, c, j), 2);
+                for (int j = 0; j < SURF_SIZE; ++j) {
+                    dist += pow(pts[i][j] - cvGetReal2D(centers, c, j), 2);
                 }
                 
                 if (dist < min_distance) {
@@ -820,40 +932,79 @@ bool Classifier::train_test(vector<pair<string, vector<Ipoint> > > *data, bool v
             cvSetReal2D(query, 0, cluster_idx, oldVal+1);//cvScalar(oldVal+1));
         }
         
-        int trueClass = stringToClassInt((*data)[img].first);
+        // double sum = 0;
+        // for (int j = 0; j < NUM_CLUSTERS; ++j)
+            // sum += cvGetReal2D(query, 0, j);
+        
+        // for (int j = 0; j < NUM_CLUSTERS; ++j) {
+            // double val = cvGetReal2D(query, 0, j);
+            // double newval = val / sum;
+            // cvSetReal2D(query, 0, j, newval);
+        // }    
+        
+        int trueClass = stringToClassInt((*data)[img]->first);
         
         int klass, klass2, klass3, klass4, klass5;
+        double scores[kNumObjectTypes - 1];
+        
         if (BAYES_ON) klass = bayes.predict(query);
         if (SVM_ON) klass2 = svm.predict(query);
         if (KNN_ON) klass3 = knn.find_nearest(query, 5);
         if (RTREE_ON) klass4 = rtree.predict(query);
-        if (MUGTREE_ON) klass5 = mugTree.predict(query);
 
         if (BAYES_ON) logResult(bayes_results, klass, trueClass);
         if (SVM_ON) logResult(svm_results, klass2, trueClass);
         if (KNN_ON) logResult(knn_results, klass3, trueClass);
         if (RTREE_ON) logResult(rtree_results, klass4, trueClass);
-        if (MUGTREE_ON) logResult(mugtree_results, klass5, trueClass, kMug);
+        if (ALL_TREES_ON) {
+
+            for (int klass = 0; klass < kNumObjectTypes - 1; ++klass) {
+                int length = cvSliceLength(CV_WHOLE_SEQ, trees[klass].get_weak_predictors());
+                CvMat *weakResponses = cvCreateMat(length, 1, CV_32FC1);
+                klass5 = trees[klass].predict(query, NULL, weakResponses, CV_WHOLE_SEQ);
+                
+                double score = cvSum(weakResponses).val[0];
+                scores[klass] = score;
+                
+                cvReleaseMat(&weakResponses);
+            }
+                         
+            double max_score = 0;
+            int max_klass = -1;
+            for (int klass = 0; klass < kNumObjectTypes - 1; ++klass) {
+                if (scores[klass] > max_score) {
+                    max_klass = klass;
+                    max_score = scores[klass];
+                }
+            }
+            
+            logResult(alltrees_results, max_score > 1 ? max_klass : kOther, trueClass);
+        }
         
         if (verbose) {
-            cout << (*data)[img].first << " (" << trueClass << ") is a ";
+            cout << (*data)[img]->first << " (" << trueClass << ") is a ";
             if (BAYES_ON) printf(" %s (bayes)!", classIntToString(klass).c_str());
             if (SVM_ON)   printf(" %s (svm)!", classIntToString(klass2).c_str());
             if (KNN_ON)   printf(" %s (knn)!", classIntToString(klass3).c_str());
-            if (RTREE_ON)   printf(" %s (%d) (rtree)!", classIntToString(klass4).c_str(), klass4);
+            if (RTREE_ON)   printf(" %s (rtree)!", classIntToString(klass4).c_str());
+            if (ALL_TREES_ON) { 
+                    cout << "\ntrees: ";
+                for (int klass = 0; klass < kNumObjectTypes - 1; ++klass) {
+                    cout << classIntToString(klass) << " (" << scores[klass] << ") ";
+                }
+                cout << endl;
+            }
             cout << endl;
         }
     }
     
     cout << endl;
     
-    printf("\ny/n: %f\n", (double)yes / (double)(yes + no));
-    
     if (BAYES_ON) printResult(bayes_results, "bayes");
     if (SVM_ON) printResult(svm_results, "svm");
     if (RTREE_ON) printResult(rtree_results, "rtree");
     if (KNN_ON) printResult(knn_results, "knn");
-    if (MUGTREE_ON) printResult(mugtree_results, "mugtree");
+    if (ALL_TREES_ON) printResult(alltrees_results, "alltrees");
     
     cout << "Step Done:  test" << endl;
     return true;
@@ -875,13 +1026,13 @@ bool Classifier::extract(TTrainingFileList& fileList, const char *featuresFile)
     cout << endl;
 
     IplImage *image;
-    vector<Ipoint> all;
-
-    int maxOther = 1000;
+    
+    int maxOther = 2000;
     int maxImages = INT_MAX;
 
     cout << "Processing images..." << endl;
 
+    //vector<int> numIpoints(kNumObjectTypes);
     int minfiles = min(maxImages, (int)fileList.files.size());
     for (int i = 0; i < minfiles; i++) 
     {
@@ -892,23 +1043,38 @@ bool Classifier::extract(TTrainingFileList& fileList, const char *featuresFile)
         if (i % 10 == 0) showProgress(i, minfiles);
 
         image = cvLoadImage(fileList.files[i].filename.c_str(), 0);
+        
         if (image == NULL) {
             cerr << "ERROR: could not load image " << fileList.files[i].filename.c_str() << endl;
             continue;
         }
         
-        // SURF.
-        std::vector<Ipoint> pts;
-        surfDetDes(image, pts, false);
+        string label = fileList.files[i].label;
 
-        for (unsigned j = 0; j < pts.size(); ++j)
-            surfFeatures[fileList.files[i].label].push_back(pts[j]);
-
-        allImages.push_back(pair<string, vector<Ipoint> >(fileList.files[i].label, pts));
-
-        cvReleaseImage(&image);
+        CvSeq *keypoints = 0, *descriptors = 0;
+        CvSURFParams params = cvSURFParams(100, SURF_SIZE == 128);
+        cvExtractSURF(image, 0, &keypoints, &descriptors, storage, params);
+        
+        if (descriptors->total == 0) continue;
+        
+        vector<float> desc;
+        desc.resize(descriptors->total * descriptors->elem_size/sizeof(float));
+        cvCvtSeqToArray(descriptors, &desc[0]);
+        
+        vector<feat> features;
+        int where = 0;
+        for (int pt = 0; pt < keypoints->total; ++pt) {
+            float *f = new float[SURF_SIZE];
+            for (int j = 0; j < SURF_SIZE; ++j) {
+                f[j] = desc[where];
+                ++where;
+            }
+            features.push_back(f);
+        }
+        
+        allImages.push_back(class_feat(label, features));
     }
-
+    
     cout << endl << "Extracted surf features: " << endl;
 
     return true;
