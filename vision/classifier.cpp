@@ -377,8 +377,8 @@ bool Classifier::run(const IplImage *frame, CObjectList *objects, bool scored)
     
     // move old objects
     for (int i = 0; i < (int)objects->size(); ++i) {
-        (*objects)[i].rect.x -= totalXDiff * 10;
-        (*objects)[i].rect.y -= totalYDiff * 10;
+        (*objects)[i].rect.x -= totalXDiff * 100;
+        (*objects)[i].rect.y -= totalYDiff * 100;
     }
     totalYDiff = 0;
     totalXDiff = 0;
@@ -592,7 +592,7 @@ bool Classifier::run_boxscan(IplImage *dst, vector<int> &cluster, vector<CvSURFP
         const CObject &o = newObjects[i].object;
         for (int j = 0; j < (int)(*oldObjects).size(); ++j) {
             int overlap = o.overlap((*oldObjects)[j]);
-            if (overlap > o.rect.width * o.rect.height * 0.3) {
+            if (overlap > 1) {
                 toRemove.push_back(i);
                 break;
             }
