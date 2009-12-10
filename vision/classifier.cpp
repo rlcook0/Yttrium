@@ -548,7 +548,7 @@ bool Classifier::run_boxscan(IplImage *dst, vector<int> &cluster, vector<CvSURFP
                 o.rect = cvRect(x, y, 32*scale, 32*scale);
                 o.label = classIntToString(klass);
         
-                showRect(dst, &o, &keypts);
+               // showRect(dst, &o, &keypts);
             }
         }
         
