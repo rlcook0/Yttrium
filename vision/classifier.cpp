@@ -34,8 +34,8 @@
 #define RTREE_ON false
 #define ALL_TREES_ON true
 
-#define LOAD_KMEANS true
-#define SAVE_KMEANS false
+#define LOAD_KMEANS false
+#define SAVE_KMEANS true
 #define LOAD_IPOINTS true
 #define SAVE_IPOINTS true
 
@@ -540,7 +540,7 @@ bool Classifier::train(TTrainingFileList& fileList, const char *trainingFile)
     for (int i = 0; i < (int)allImages.size(); ++i) indexes.push_back(i);
     random_shuffle ( indexes.begin(), indexes.end() );
     
-    int size = (int)((double)allImages.size() * 0.8);
+    int size = (int)((double)allImages.size() * 1.0);
     trainSet = new class_feat_vec_star();
     testSet = new class_feat_vec_star();
     
@@ -1027,7 +1027,7 @@ bool Classifier::extract(TTrainingFileList& fileList, const char *featuresFile)
 
     IplImage *image;
     
-    int maxOther = 2000;
+    int maxOther = INT_MAX;
     int maxImages = INT_MAX;
 
     cout << "Processing images..." << endl;
