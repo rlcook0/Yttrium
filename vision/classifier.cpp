@@ -524,12 +524,12 @@ bool Classifier::run_boxscan(IplImage *dst, vector<int> &cluster, vector<CvSURFP
                 int klass = btrees.predict(query, scores);
                 int min_score = 0;
                                 
-                cout << "I think it's a ";
+//                cout << "I think it's a ";
                 for (int klass = 0; klass < kNumObjectTypes - 1; ++klass) {
-                    cout << classIntToString(klass) << " (" << scores[klass] << ") ";
+//                    cout << classIntToString(klass) << " (" << scores[klass] << ") ";
                     min_score = (scores[klass] < min_score) ? scores[klass] : min_score;
                 }
-                cout << endl;
+//                cout << endl;
                 
                 
                 if (klass != kOther) {
