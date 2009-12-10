@@ -34,64 +34,72 @@ DataSet::DataSet()
     num_classes = kNumObjectTypes;
     num_features = SURF_SIZE;
     
-    num_images = num_features = num_
+    num_images = num_samples = 0;
     post_kmeans = pre_kmeans = NULL;
 }
 
-void  DataSet::push(int image, float *sample)
+int DataSet::push(int klass)
 {
-    assert (image < data.size() && image >= 0);
+    assert (klass < num_classes && klass >= 0);
+    data.push_back( DataSetImage(klass, vector<float *>() ) );
+}
+
+int DataSet::push(int klass, vector<float *> &fts)
+{
+    assert (klass < num_classes && klass >= 0);
+    data.push_back( DataSetImage(klass, fts) );
+}
+
+int  DataSet::push(int image, int klass, float *sample)
+{
+    assert (klass < num_classes && klass >= 0);
+    assert (image >= 0 && image < num_images);
+    assert (sample != NULL);
     
-    for (unsigned int i = 0; i < data.size(); i++)
-    {
-        if (data[i].first == klass)
-        {
-            data[i].second.push_back(feature);
-            num_samples++;
-            return;
-        }
-    }
+    assert (data[image].first == klass);
+    data[image].second.push_back(sample);
     
-    printf("DataSet pushed feature to nonexistant class: %d \n", klass);
-    assert(false);
+    num_samples++;
+    return data[image].second.size() - 1;
     
 }
 
 float *DataSet::get(int image, int sample)
 {
-    assert (klass < kNumObjectTypes && klass >= 0);
-    assert (sample < num_samples);
+    assert (image < num_images);
+    assert (sample < data[image].second.size());
     
-    for (unsigned int i = 0; i < data.size(); i++)
-        if (data[i].first == klass)
-            return data[i].second[sample];
-    
-    printf("DataSet getting nonexistant sample: %d or image: %d \n", sample, klass);
-    stats();
-    assert(false);
+    return data[image].second[sample];
 }
 
 float DataSet::get(int image, int sample, int ith) 
 {
-    assert (klass < kNumObjectTypes && klass >= 0);
-    assert (sample < num_samples);
-    assert (ith < num_feature);
+    assert (image < num_images);
+    assert (sample < data[image].second.size());
+    assert (ith < num_features);
     
-    for (unsigned int i = 0; i < data.size(); i++)
-        if (data[i].first == klass)
-            return data[i].second[sample][ith];
-    
-    printf("DataSet getting nonexistant feature: %d sample: %d or image: %d \n", ith, sample, klass);
-    stats();
-    assert(false);
+    return data[image].second[sample];
+}
+
+int DataSet::get_class(int image)
+{
+    assert (image < num_images && image >= 0);
+    return data[image].first;
+}
+
+int DataSet::count(int image)
+{
+    assert(image >= 0 && image < num_images);
+    return data[i].second.size();
 }
 
 void  DataSet::recount() 
 {
-    num_classes = num_features = num_samples = 0;
     
-    num_classes = data.size();
+    num_classes = kNumObjectTypes;
     num_features = SURF_SIZE;
+    num_images = data.size();
+    num_samples = 0;
     
     for (unsigned int i = 0; i < data.size(); i++)
         num_samples += data[i].second.size();
@@ -103,7 +111,7 @@ void  DataSet::recount()
 void DataSet::stats()
 {
     recount();
-    printf("DataSet -- classes: %d samples: %d \n", num_classes, num_samples );
+    printf("DataSet -- classes: %d images: %d samples: %d fts: %d \n", num_classes, num_images, num_samples, num_features );
     
     for (unsigned int i = 0; i < data.size(); i++)
         printf("%d %s: %d \n", data[i].first, classIntToString(data[i].first), data[i].second.size());
@@ -111,43 +119,54 @@ void DataSet::stats()
     printf("\n");
 }
 
-
-CvMat *DataSet::test_input(CvMat *clusters) {
-    if (post_kmeans != NULL) return post_kmeans;
+CvMat *DataSet::cluster_samples() {
+    if (samples != NULL) return samples;
     
     assert(clusters != NULL);
     
-    post_kmeans = cvCreateMat(num_samples, NUM_CLUSTERS, CV_32FC1);
+    samples = cvCreateMat(num_samples, NUM_CLUSTERS, CV_32FC1);
     
     int sample = 0;
-    for (int i = 0; i < (int) data.size(); i++) {                   //  For Each Class
-        for (int s = 0; s < (int) data[i].second.size(); s++) {     //      For Each Sample In that Class
+    for (int i = 0; i < (int) data.size(); i++) {                   //  For Each Image
+        for (int s = 0; s < (int) data[i].second.size(); s++) {     //      For Each Sample In that Image
             int cluster = cvGetReal1D(clusters, sample++);          //          Get The Cluster for this sample.
-            int oldValue = post_kmeans.get(i, cluster);             //          Get Old value for this [sample][cluster]
-            post_kmeans->set(i, cluster, oldValue + 1);             //          Save Increment
-            cvSetReal2D(post_kmeans, i, j, pt[j]);
+            int oldValue = cvGetReal2D(samples, i, cluster);        //          Get Old value for this [image][cluster]
+            cvSetReal2D(samples, i, j, oldValue + 1);
         }
     }
     
-    return post_kmeans->matrix;
+    return samples;
+}
+
+CvMat *DataSet::cluster_responses()
+{
+    if (responses != NULL) return responses;
+    assert(num_samples == data->size());
+    
+    responses = cvCreateMat(num_samples, 1, CV_32SC1);
+
+    for (int i = 0; i < (int)data->size(); ++i) 
+        cvSetReal1D(responses, i, data[i]->first);
+    
+    return respones;
 }
 
 CvMat *DataSet::kmeans_input()
 {
-    if (pre_kmeans != NULL) return pre_kmeans;
+    if (to_kmeans != NULL) return to_kmeans;
     
-    pre_kmeans = cvCreateMat(num_samples, SURF_SIZE, CV_32FC1);
+    to_kmeans = cvCreateMat(num_samples, SURF_SIZE, CV_32FC1);
     
     int sample = 0;
     for (int i = 0; i < (int) data.size(); i++) {                   //  For Each Class
         for (int s = 0; s < (int) data[i].second.size(); s++) {     //      For Each Sample In that Class
             for (int j = 0; j < SURF_SIZE; j++) {                   //          For Each Feature in that Sample
-                cvSetReal2D(pre_kmeans, sample++, j, data.get(i, s, j));   //      Set the next sample in the matrix
+                cvSetReal2D(to_kmeans, sample++, j, data.get(i, s, j));   //      Set the next sample in the matrix
             }
         }
     }
     
-    return pre_kmeans->matrix;
+    return to_kmeans;
 }
 
 
@@ -186,7 +205,7 @@ bool StatModel::setup()
     
 }
 
-bool StatModel::train(Dataset *data)
+bool StatModel::train(DataSet *data)
 {
     scores.reset();
     
@@ -196,7 +215,9 @@ bool StatModel::train(Dataset *data)
     
     data->stats();
     
-    train_run(Dataset *data);
+    train_run(data);
+    
+    save();
     
     cout << endl;
     score->out();
@@ -204,7 +225,7 @@ bool StatModel::train(Dataset *data)
 }
 
 
-bool StatModel::test(Dataset *data)
+bool StatModel::test(DataSet *data)
 {
     scores.reset();
     
@@ -214,16 +235,35 @@ bool StatModel::test(Dataset *data)
     
     data->stats();
     
-    test_run(Dataset *data);
+    test_run(data);
     
     cout << endl;
     score->out();
     cout << "------------------------------------------" << endl;
 }
 
-bool SM_SVM::train_run()
+int StatModel::test(CvMat *query, int truth)
 {
-    
+    int guess = predict(query);
+    score.add(guess, truth);
+    return guess;
 }
 
+// SVM
+bool SM_SVM::train_run(DataSet *data)
+{
+    svm.train(data->cluster_samples(), data->cluster_responses());
+}
+
+bool SM_SVM::test_run(CvMat *samples, CvMat *responses)
+{
+//    svm.
+}
+
+int SM_SVM::predict(CvMat *query)
+{
+    return svm.predict(query);
+}
+
+//    CvBoost trees[kNumObjectTypes];
 

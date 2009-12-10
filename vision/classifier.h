@@ -31,6 +31,7 @@
 
 #include "logreg.h"
 #include "template.h"
+#include "statmodel.h"
 
 /* Classifier class ---------------------------------------------------------
  */
@@ -51,10 +52,6 @@ enum ObjectTypes {
 
 using namespace std;
 
-typedef float* feat;
-typedef vector<pair<string, vector<feat> > > class_feat_vec;
-typedef vector<pair<string, vector<feat> >* > class_feat_vec_star;
-typedef pair<string, vector<feat> > class_feat;
 
 class Ipoint;
 struct CvFeatureTree;
@@ -65,31 +62,17 @@ protected:
     CvMemStorage* storage;
     
     // CS221 TO DO: ADD YOUR MEMBER VARIABLES HERE
-    map< string, vector<Ipoint> > surfFeatures;
-    class_feat_vec allImages; 
-    class_feat_vec_star *trainSet, *testSet;
-    
-    CvFeatureTree *surfFT, *centersFT;
-    
-    vector< pair<string, int> > surfThresh;
-    map<string, int> surfTotal;
-    
-    
-    int surfTotalIpoints;
-    
-    string indexToClass(int index);
-    int indexToClassInt(int index);
-    string classIntToString(int type);
-    int stringToClassInt(string type);
-    
-    CvNormalBayesClassifier bayes;
-    CvKNearest knn;
-    CvSVM svm;
-    CvRTrees rtree;
-    
-    CvBoost trees[kNumObjectTypes];
-
+    DataSet set_all;
+    DataSet set_test;
+    DataSet set_train;
+        
     CvMat* centers;
+    
+//    SM_Bayes bayes;
+    SM_SVM svm;
+    //StatModel rtree;
+    ///StatModel trees;
+    
 public:
     // constructors
     Classifier();
@@ -97,33 +80,30 @@ public:
     // destructor
     virtual ~Classifier();
 
-    // load and save classifier configuration
-    virtual bool loadState(const char *);
-    virtual bool saveState(const char *);
-
-    // load and save classifier configuration    
-    virtual bool loadSURFFile(const char *);
-    virtual bool saveSURFFile(const char *);
-    
-    virtual bool setupKDTree();
-    
     // run the classifier over a single frame
     virtual bool run(const IplImage *, CObjectList *, bool);
     virtual bool run_boxscan(IplImage *, vector<int> &, vector<CvSURFPoint> &, vector<feat> &);
     
     // extract the classifier features
-    virtual bool extract(TTrainingFileList&, const char *);
+    virtual bool extract(TTrainingFileList&);
         
     // train the classifier using given set of files
-    virtual bool train(TTrainingFileList&, const char *);
-        
-    virtual bool train_kmeans(CvMat *);
-    virtual bool train_bayes(CvMat *, CvMat *);
-    virtual bool train_svm(CvMat *, CvMat *);
-    virtual bool train_knn(CvMat *, CvMat *);
-    virtual bool train_test(class_feat_vec_star *data, bool);
-    virtual bool train_rtree(CvMat *, CvMat *);
-    virtual bool train_alltrees(CvMat *, CvMat *);
+    virtual bool train();    
+    
+    // Settings
+    bool kmeans_load;
+    bool kmeans_save;
+    
+    bool bayes_on;
+    bool svm_on;
+    bool rtree_on;
+    bool trees_on;
+    
+    bool test_on;
+    
+    int num_clusters;
+    int max_others;
+    
 
 private:
     

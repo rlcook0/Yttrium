@@ -139,13 +139,13 @@ int main(int argc, char *argv[])
     CvFont font;
     ofstream *outputStream = NULL;
 
-    // configure the classifier
-    if (configurationFile != NULL) {
-        if (!classifier.loadState(configurationFile)) {
-            cerr << "ERROR: could not configure the classifier" << endl;
-            exit(-1);
-        }
-    }
+    // // configure the classifier
+    // if (configurationFile != NULL) {
+    //     if (!classifier.loadState(configurationFile)) {
+    //         cerr << "ERROR: could not configure the classifier" << endl;
+    //         exit(-1);
+    //     }
+    // }
     
     // configure the replayer
     if (groundTruthFile != NULL) {

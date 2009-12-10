@@ -40,32 +40,46 @@ public:
 int stringToClassInt(string type);
 string classIntToString(int type);
 
-class Dataset {
+typedef pair<int, vector<float *> > DataSetImage;
+typedef vector<DataSetImage>  DataSetVector;
+typedef vector<DataSetImage *> DataSetStarVector;
+
+class DataSet {
     
     DataSet();
     
-    void push(string class, int image, float *sample);
+    
+    int push(int klass);
+    int push(int klass, vector<float *> &fts);
+    int push(int image, int klass, float *sample);
+    
     float *get(int image, int sample);
-    float get(int image, int sample, int ith);
-    string get_class(int image);
+    float  get(int image, int sample, int ith);
+    
+    int count(int image);
     
     void recount();
     
     int num_features;
     int num_classes;
     int num_samples;
+    int num_images;
     
-    vector<pair<int, vector<float *> > > data;
+    DataSetVector data;
     
-    CvMat *centers();
     CvMat *kmeans_input();
-    CvMat *test_input(CvMat *clusters);
+
+    CvMat *cluster_responses();
+    CvMat *cluster_samples();
+        
+    static CvMat *clusters;
+    static CvMat *centers;
     
-protected:
     
-    CvMat *pre_kmeans;   //  PRE-kmeans
-    CvMat *post_kmeans;  // POST-kmeans
-    
+    CvMat *to_kmeans;   //  PRE-kmeans
+
+    CvMat *samples;     // POST-kmeans
+    CvMat *responses;
 };
  
 class StatModel {
@@ -81,19 +95,21 @@ public:
     virtual bool save(const char *);
     
     virtual bool setup();
-    virtual bool train(Dataset *data);
-    virtual bool test(Dataset *data);
-    virtual bool predict();
+    virtual bool train(DataSet *data);
+    virtual bool test(DataSet *data);
+    virtual int  test(CvMat *query, int truth);
     
     // stats
     virtual float score();
     
+    Metrics scores;
+    
 protected:
     
-    virtual bool train_run(Dataset *data) = 0;
-    virtual bool test_run(Dataset *data) = 0;
+    virtual bool train_run(DataSet *data) = 0;
+    virtual bool test_run(DataSet *data) = 0;
+    virtual int predict(CvMat *query) = 0;
     
-    Metrics scores;
     CvStatModel *model;
     char *savename;
     char *name;
@@ -108,8 +124,8 @@ public:
     
 protected:
     
-    virtual bool train_run(Dataset *data);
-    virtual bool test_run(Dataset *data);
+    virtual bool train_run(CvMat *data);
+    virtual bool test_run(CvMat *data);
 
     CvSVM svm;
     
