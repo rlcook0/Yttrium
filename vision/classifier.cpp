@@ -383,6 +383,9 @@ bool Classifier::run(const IplImage *frame, CObjectList *objects, bool scored)
     totalYDiff = 0;
     totalXDiff = 0;
     
+    cout << totalXDiff << endl;
+    cout << totalYDiff << endl;
+    
     // Convert to grayscale.
     IplImage *gray  = cvCreateImage(cvGetSize(frame), IPL_DEPTH_8U, 1);
     cvCvtColor(frame, gray, CV_BGR2GRAY);
@@ -593,7 +596,6 @@ bool Classifier::run_boxscan(IplImage *dst, vector<int> &cluster, vector<CvSURFP
         for (int j = 0; j < (int)(*oldObjects).size(); ++j) {
             int overlap = o.overlap((*oldObjects)[j]);
             if (overlap > 1) {
-                cout << "SHOULD DELETE";
                 toRemove.push_back(i);
                 break;
             }
