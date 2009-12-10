@@ -43,9 +43,9 @@ enum ObjectTypes {
     kClock = 0,
     kMug,
     kKeyboard,
-    kOther,
     kStapler,
     kScissors,
+    kOther,
     kNumObjectTypes
 };
 
@@ -53,6 +53,7 @@ using namespace std;
 
 typedef float* feat;
 typedef vector<pair<string, vector<feat> > > class_feat_vec;
+typedef vector<pair<string, vector<feat> >* > class_feat_vec_star;
 typedef pair<string, vector<feat> > class_feat;
 
 class Ipoint;
@@ -65,7 +66,8 @@ protected:
     
     // CS221 TO DO: ADD YOUR MEMBER VARIABLES HERE
     map< string, vector<Ipoint> > surfFeatures;
-    class_feat_vec allImages, *trainSet, *testSet;
+    class_feat_vec allImages; 
+    class_feat_vec_star *trainSet, *testSet;
     
     CvFeatureTree *surfFT, *centersFT;
     
@@ -85,7 +87,7 @@ protected:
     CvSVM svm;
     CvRTrees rtree;
     
-    CvBoost mugTree;
+    CvBoost trees[kNumObjectTypes];
 
     CvMat* centers;
 public:
@@ -119,9 +121,9 @@ public:
     virtual bool train_bayes(CvMat *, CvMat *);
     virtual bool train_svm(CvMat *, CvMat *);
     virtual bool train_knn(CvMat *, CvMat *);
-    virtual bool train_test(class_feat_vec *data, bool);
+    virtual bool train_test(class_feat_vec_star *data, bool);
     virtual bool train_rtree(CvMat *, CvMat *);
-    virtual bool train_mugtree(CvMat *, CvMat *);
+    virtual bool train_alltrees(CvMat *, CvMat *);
 
 private:
     
