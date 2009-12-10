@@ -1057,10 +1057,10 @@ bool Classifier::extract(TTrainingFileList& fileList, const char *featuresFile)
         
         // IVAN's 
         CvPoint2D32f* corners = new CvPoint2D32f[ MAX_CORNERS ];
+        CvSize img_sz = cvGetSize(image);
         IplImage* eig_image = cvCreateImage( img_sz, IPL_DEPTH_32F, 1 );
         IplImage* tmp_image = cvCreateImage( img_sz, IPL_DEPTH_32F, 1 );
         int corner_count = MAX_CORNERS;
-        CvSize img_sz = cvGetSize(image);
         cvGoodFeaturesToTrack(
             image,
             eig_image,
