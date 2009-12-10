@@ -69,7 +69,7 @@ protected:
     CvRNG rng;
     CvMemStorage* storage;
     
-    vector<FoundObject> prevObjects;
+    vector<CObject> prevObjects;
     
     // CS221 TO DO: ADD YOUR MEMBER VARIABLES HERE
     map< string, vector<Ipoint> > surfFeatures;
@@ -100,6 +100,8 @@ protected:
     
     CvMat* centers;
     void optical_flow(const IplImage *, double *, double *);
+    
+    double totalXDiff, totalYDiff;
     
 public:
     // constructors
