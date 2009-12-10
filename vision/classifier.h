@@ -27,7 +27,6 @@
 
 #include "utils.h"
 #include "objects.h"
-#include "featureDictionary.h"
 
 #include "logreg.h"
 #include "template.h"
@@ -36,19 +35,6 @@
 /* Classifier class ---------------------------------------------------------
  */
 
-#define NUM_CLUSTERS    1000
-#define MIN_IPOINTS     15
-#define SURF_SIZE       128
- 
-enum ObjectTypes {
-    kClock = 0,
-    kMug,
-    kKeyboard,
-    kStapler,
-    kScissors,
-    kOther,
-    kNumObjectTypes
-};
 
 using namespace std;
 
@@ -68,11 +54,6 @@ protected:
         
     CvMat* centers;
     
-//    SM_Bayes bayes;
-    SM_SVM svm;
-    //StatModel rtree;
-    ///StatModel trees;
-    
 public:
     // constructors
     Classifier();
@@ -82,28 +63,37 @@ public:
 
     // run the classifier over a single frame
     virtual bool run(const IplImage *, CObjectList *, bool);
-    virtual bool run_boxscan(IplImage *, vector<int> &, vector<CvSURFPoint> &, vector<feat> &);
+//    virtual bool run_boxscan(IplImage *, vector<int> &, vector<CvSURFPoint> &, vector<feat> &);
     
     // extract the classifier features
     virtual bool extract(TTrainingFileList&);
         
     // train the classifier using given set of files
-    virtual bool train();    
+    virtual bool train(); 
+    
+    bool test(DataSet *data);
+    
+    virtual bool kmeans(DataSet *data);   
+    
+    int best_cluster(CvMat *centers, float *vars);
     
     // Settings
     bool kmeans_load;
     bool kmeans_save;
     
-    bool bayes_on;
-    bool svm_on;
-    bool rtree_on;
-    bool trees_on;
-    
     bool test_on;
     
     int num_clusters;
     int max_others;
+    int test_to_train;
     
+    //    SM_Bayes bayes;
+        SM_SVM svm;
+        SM_RTrees rtrees;
+        
+        //StatModel rtree;
+        ///StatModel trees;
+
 
 private:
     

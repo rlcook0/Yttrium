@@ -23,10 +23,10 @@ double Metrics::truenr()    { return (double) tn / (double)(tn + fp); }
 double Metrics::accuracy()  { return (double) (tp + tn) / (double)(tn + tp + fn + fp); }
 double Metrics::fscore()    { return 2 * precision() * recall() / (precision() + recall()); }
 
-void Metrics::out() 
+void Metrics::out(const char *msg) 
 {
-   printf("tp: %d tn: %d fp: %d fn: %d -- prec: %lf rec: %lf tnr: %lf acc: %lf fscore: %lf \n",
-       tp, tn, fp, fn, precision(), recall(), truenr(), accuracy(), fscore());
+   printf("%s tp: %d tn: %d fp: %d fn: %d -- prec: %lf rec: %lf tnr: %lf acc: %lf fscore: %lf \n",
+       msg, tp, tn, fp, fn, precision(), recall(), truenr(), accuracy(), fscore());
 }
 
 DataSet::DataSet()
@@ -35,19 +35,23 @@ DataSet::DataSet()
     num_features = SURF_SIZE;
     
     num_images = num_samples = 0;
-    post_kmeans = pre_kmeans = NULL;
+    to_kmeans = responses = samples = NULL;
+    clusters = NULL;
 }
 
 int DataSet::push(int klass)
 {
     assert (klass < num_classes && klass >= 0);
     data.push_back( DataSetImage(klass, vector<float *>() ) );
+    return num_images++;
 }
 
 int DataSet::push(int klass, vector<float *> &fts)
 {
     assert (klass < num_classes && klass >= 0);
     data.push_back( DataSetImage(klass, fts) );
+    num_samples += fts.size();
+    return num_images++;
 }
 
 int  DataSet::push(int image, int klass, float *sample)
@@ -67,7 +71,7 @@ int  DataSet::push(int image, int klass, float *sample)
 float *DataSet::get(int image, int sample)
 {
     assert (image < num_images);
-    assert (sample < data[image].second.size());
+    assert (sample < num_samples);
     
     return data[image].second[sample];
 }
@@ -75,10 +79,10 @@ float *DataSet::get(int image, int sample)
 float DataSet::get(int image, int sample, int ith) 
 {
     assert (image < num_images);
-    assert (sample < data[image].second.size());
+    assert (sample < num_samples);
     assert (ith < num_features);
     
-    return data[image].second[sample];
+    return data[image].second[sample][ith];
 }
 
 int DataSet::get_class(int image)
@@ -90,7 +94,7 @@ int DataSet::get_class(int image)
 int DataSet::count(int image)
 {
     assert(image >= 0 && image < num_images);
-    return data[i].second.size();
+    return (int)data[image].second.size();
 }
 
 void  DataSet::recount() 
@@ -113,8 +117,15 @@ void DataSet::stats()
     recount();
     printf("DataSet -- classes: %d images: %d samples: %d fts: %d \n", num_classes, num_images, num_samples, num_features );
     
-    for (unsigned int i = 0; i < data.size(); i++)
-        printf("%d %s: %d \n", data[i].first, classIntToString(data[i].first), data[i].second.size());
+    int counts[kNumObjectTypes][2] = { {0} };
+    for (int i = 0; i < num_images; i++)
+    {
+        counts[ get_class(i) ][0] += count(i);
+        counts[ get_class(i) ][1]++;
+    }
+    
+    for (int i = 0; i < num_classes; i++)
+        printf("%d %s: %d images, %d samples \n", i, classIntToString(i).c_str(), counts[i][1], counts[i][0]);
 
     printf("\n");
 }
@@ -124,14 +135,14 @@ CvMat *DataSet::cluster_samples() {
     
     assert(clusters != NULL);
     
-    samples = cvCreateMat(num_samples, NUM_CLUSTERS, CV_32FC1);
+    samples = cvCreateMat(num_samples, centers->rows, CV_32FC1);
     
     int sample = 0;
     for (int i = 0; i < (int) data.size(); i++) {                   //  For Each Image
         for (int s = 0; s < (int) data[i].second.size(); s++) {     //      For Each Sample In that Image
             int cluster = cvGetReal1D(clusters, sample++);          //          Get The Cluster for this sample.
             int oldValue = cvGetReal2D(samples, i, cluster);        //          Get Old value for this [image][cluster]
-            cvSetReal2D(samples, i, j, oldValue + 1);
+            cvSetReal2D(samples, i, cluster, oldValue + 1);         //          Set Incremented Value
         }
     }
     
@@ -141,14 +152,14 @@ CvMat *DataSet::cluster_samples() {
 CvMat *DataSet::cluster_responses()
 {
     if (responses != NULL) return responses;
-    assert(num_samples == data->size());
+    assert(num_images == (int)data.size());
     
     responses = cvCreateMat(num_samples, 1, CV_32SC1);
 
-    for (int i = 0; i < (int)data->size(); ++i) 
-        cvSetReal1D(responses, i, data[i]->first);
+    for (int i = 0; i < (int)data.size(); ++i) 
+        cvSetReal1D(responses, i, data[i].first);
     
-    return respones;
+    return responses;
 }
 
 CvMat *DataSet::kmeans_input()
@@ -161,8 +172,9 @@ CvMat *DataSet::kmeans_input()
     for (int i = 0; i < (int) data.size(); i++) {                   //  For Each Class
         for (int s = 0; s < (int) data[i].second.size(); s++) {     //      For Each Sample In that Class
             for (int j = 0; j < SURF_SIZE; j++) {                   //          For Each Feature in that Sample
-                cvSetReal2D(to_kmeans, sample++, j, data.get(i, s, j));   //      Set the next sample in the matrix
+                cvSetReal2D(to_kmeans, sample, j, get(i, s, j));  //          Set the next sample in the matrix
             }
+            sample++;
         }
     }
     
@@ -194,58 +206,68 @@ string classIntToString(int type)
     return "error";
 }
 
-bool StatModel::load() { load(savename); }
-bool StatModel::save() { save(savename); }
+bool StatModel::load() { return load(savename.c_str()); }
+bool StatModel::save() { return save(savename.c_str()); }
 
-bool StatModel::load(const char *filename) { if (model != NULL) model->load(filename); }
-bool StatModel::save(const char *filename) { if (model != NULL) model->save(filename); }
+bool StatModel::load(const char *filename) { if (model != NULL) model->load(filename); return model != NULL; }
+bool StatModel::save(const char *filename) { if (model != NULL) model->save(filename); return model != NULL; }
 
 bool StatModel::setup()
 {
+    if (!on) return false;
     
+    return true;
 }
 
 bool StatModel::train(DataSet *data)
 {
+    if (!on) return false;
+    
     scores.reset();
     
     cout << "------------------------------------------" << endl;
-    cout << "Training " << name << endl; 
+    cout << "\t\tTraining " << name << endl; 
     flush(cout);
     
-    data->stats();
+//    data->stats();
     
     train_run(data);
     
-    save();
+    if (save_on) save();
     
     cout << endl;
-    score->out();
+    scores.out();
     cout << "------------------------------------------" << endl;
+    return true;
 }
 
 
 bool StatModel::test(DataSet *data)
 {
+    if (!on) return false;
+    
     scores.reset();
     
     cout << "------------------------------------------" << endl;
-    cout << "Testing " << name << endl; 
+    cout << "\t\tTesting " << name << endl; 
     flush(cout);
     
-    data->stats();
+//    data->stats();
     
     test_run(data);
     
     cout << endl;
-    score->out();
+    scores.out();
     cout << "------------------------------------------" << endl;
+    return true;
 }
 
 int StatModel::test(CvMat *query, int truth)
 {
+    if (!on) return false;
+    
     int guess = predict(query);
-    score.add(guess, truth);
+    scores.add(guess, truth);
     return guess;
 }
 
@@ -253,11 +275,13 @@ int StatModel::test(CvMat *query, int truth)
 bool SM_SVM::train_run(DataSet *data)
 {
     svm.train(data->cluster_samples(), data->cluster_responses());
+    return true;
 }
 
-bool SM_SVM::test_run(CvMat *samples, CvMat *responses)
+bool SM_SVM::test_run(DataSet *data)
 {
-//    svm.
+//    svm.    
+    return true;
 }
 
 int SM_SVM::predict(CvMat *query)
@@ -266,4 +290,58 @@ int SM_SVM::predict(CvMat *query)
 }
 
 //    CvBoost trees[kNumObjectTypes];
+
+
+
+// SVM
+bool SM_RTrees::train_run(DataSet *data)
+{
+    CvRTParams params( 
+        5,                                 //Max depth 
+        2,                                 //Min sample count 
+        0,                                 //Regression accuracy 
+        false,                              //Use Surrogates 
+        10,                                 //Max Categories 
+        NULL,                               //Priors  
+        false,                              //Calculate Variables variance 
+        0,                                  //Nactive Vars 
+        500,                                //Max Tree Count 
+        0.1,                            //Accuracy to archive 
+        CV_TERMCRIT_EPS|CV_TERMCRIT_ITER    //Criteria to stop algorithm 
+    );
+    
+    CvMat *desc = data->cluster_samples();
+    CvMat *var_type = cvCreateMat(desc->cols + 1, 1, CV_8U);
+    cvSet(var_type, cvScalarAll(CV_VAR_NUMERICAL));
+    cvSet2D(var_type, desc->cols, 0, cvScalar(CV_VAR_CATEGORICAL));
+    
+    rtrees.train(
+        desc, 
+        CV_ROW_SAMPLE,
+        data->cluster_responses(),
+        0,
+        0,
+        var_type,
+        0,
+        params
+    );
+
+    return true;
+}
+
+bool SM_RTrees::test_run(DataSet *data)
+{
+//    svm.    
+    return true;
+}
+
+int SM_RTrees::predict(CvMat *query)
+{
+    return rtrees.predict(query);
+}
+
+//    CvBoost trees[kNumObjectTypes];
+
+
+
 

@@ -9,10 +9,26 @@
 #include "objects.h"
 #include "template.h"
 
+#include "string.h"
+
 /* Classifier Type class ---------------------------------------------------------
  */
  
+#define NUM_CLUSTERS    1000
+#define MIN_IPOINTS     15
+#define SURF_SIZE       128
+ 
 using namespace std;
+
+enum ObjectTypes {
+    kClock = 0,
+    kMug,
+    kKeyboard,
+    kStapler,
+    kScissors,
+    kOther,
+    kNumObjectTypes
+};
 
 
 class Metrics {
@@ -34,7 +50,7 @@ public:
     double accuracy();
     double fscore();
     
-    void out();
+    void out(const char *msg="");
 };
  
 int stringToClassInt(string type);
@@ -45,7 +61,8 @@ typedef vector<DataSetImage>  DataSetVector;
 typedef vector<DataSetImage *> DataSetStarVector;
 
 class DataSet {
-    
+
+public:    
     DataSet();
     
     
@@ -55,10 +72,12 @@ class DataSet {
     
     float *get(int image, int sample);
     float  get(int image, int sample, int ith);
+    int get_class(int image);
     
     int count(int image);
     
     void recount();
+    void stats();
     
     int num_features;
     int num_classes;
@@ -72,9 +91,8 @@ class DataSet {
     CvMat *cluster_responses();
     CvMat *cluster_samples();
         
-    static CvMat *clusters;
-    static CvMat *centers;
-    
+    CvMat *clusters;
+    CvMat *centers;
     
     CvMat *to_kmeans;   //  PRE-kmeans
 
@@ -85,7 +103,7 @@ class DataSet {
 class StatModel {
 public:
     
-    StatModel() { savename = "StatModel.dat"; name="StatModel"; model = NULL; }
+    StatModel() { on = save_on = false; savename = "StatModel.dat"; name ="StatModel"; model = NULL; }
     
     // load and save classifier configuration
     virtual bool load();
@@ -100,9 +118,10 @@ public:
     virtual int  test(CvMat *query, int truth);
     
     // stats
-    virtual float score();
-    
     Metrics scores;
+    
+    bool on;
+    bool save_on;
     
 protected:
     
@@ -111,23 +130,40 @@ protected:
     virtual int predict(CvMat *query) = 0;
     
     CvStatModel *model;
-    char *savename;
-    char *name;
+    string savename;
+    string name;
     
 };
 
 
-class SM_SVM : StatModel {
+class SM_SVM : public StatModel {
 public:
     
-    SM_SVM() { savename = "svm.dat"; name="SVM"; model = NULL; model = &svm; }
+    SM_SVM() : StatModel() { savename = "svm.dat"; name="SVM"; model = NULL; model = &svm; }
     
 protected:
     
-    virtual bool train_run(CvMat *data);
-    virtual bool test_run(CvMat *data);
+    virtual bool train_run(DataSet *data);
+    virtual bool test_run(DataSet *data);
+    virtual int predict(CvMat *query);    
 
     CvSVM svm;
+    
+};
+
+
+class SM_RTrees : public StatModel {
+public:
+    
+    SM_RTrees() : StatModel() { savename = "rtrees.dat"; name="RTrees"; model = NULL; model = &rtrees; }
+    
+protected:
+    
+    virtual bool train_run(DataSet *data);
+    virtual bool test_run(DataSet *data);
+    virtual int predict(CvMat *query);    
+
+    CvRTrees rtrees;
     
 };
 

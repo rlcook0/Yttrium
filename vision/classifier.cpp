@@ -28,6 +28,8 @@
 #include "classifier.h"
 #include "logreg.h"
 
+#include "statmodel.h"
+
 // Classifier class ---------------------------------------------------------
  
 // default constructor
@@ -41,9 +43,11 @@ Classifier::Classifier()
     max_others = 2000;
     num_clusters = 100;
     kmeans_load = false;
-    kmeans_save = true;
+    kmeans_save = false;
     
     test_on = true;
+    test_to_train = 4;
+    centers = NULL;
     
 }
     
@@ -88,6 +92,7 @@ bool Classifier::showRect(IplImage *image, CObject *rect, const vector<CvSURFPoi
     // cvReleaseImage(&frameCopy);
     // 
     // return cvWaitKey(10) != -1;
+    return true;
 }
 // run
 // Runs the classifier over the given frame and returns a list of
@@ -172,7 +177,7 @@ bool Classifier::run(const IplImage *frame, CObjectList *objects, bool scored)
     //   run_boxscan(dst, cluster, keypts, features);
     // 
     //   cvReleaseImage(&gray);
-    //   return true;
+       return true;
 }
 
 
@@ -277,13 +282,17 @@ bool Classifier::train()
     cout << "------------------------------------------" << endl;
     cout << "\t\tTraining" << endl;
     
-    if (kmeans_load)
-    kmeans( set_train.kmeans_input() );
+    kmeans( &set_train );
     
     svm.train( &set_train );
+    rtrees.train( &set_train );
     
-    test();
+    test( &set_train);
+    test( &set_test);
+    
+    return true;
 }
+
 
 
 bool Classifier::kmeans(DataSet *data) 
@@ -301,17 +310,21 @@ bool Classifier::kmeans(DataSet *data)
         data->centers = centers;
         
         cout << "Loaded Successfully" << endl;
-        return;
+        return true;
     }
     
     CvMat *desc = data->kmeans_input();
-    CvMat *clusters = cvCreateMat(data->num_samples, 1, CV_32SC1);
-    centers = cvCreateMat(NUM_CLUSTERS, SURF_SIZE, CV_32FC1);
-
+    data->clusters = cvCreateMat(data->num_samples, 1, CV_32SC1);
+    centers = cvCreateMat(num_clusters, SURF_SIZE, CV_32FC1);
+    data->centers = centers;
+    
+    cout << "Running with k = " << num_clusters << endl;
+    flush(cout);
+    
     cvKMeans2(
-        all_desc,       // samples
-        NUM_CLUSTERS,   // clusters
-        clusters,       // labels
+        desc,           // samples
+        num_clusters,   // clusters
+        data->clusters, // labels
         cvTermCriteria(
             CV_TERMCRIT_EPS|CV_TERMCRIT_ITER, // End criteria
             10,                               // Max iter
@@ -338,60 +351,7 @@ bool Classifier::kmeans(DataSet *data)
 }
 
 
-// bool Classifier::train_rtree(CvMat *desc, CvMat *responses) 
-// {
-//     cout << "------------------------------------------" << endl;
-//     cout << "Step Start: rtree" << endl; 
-//     
-//     CvRTParams params( 
-//         5,                                 //Max depth 
-//         2,                                 //Min sample count 
-//         0,                                 //Regression accuracy 
-//         false,                              //Use Surrogates 
-//         10,                                 //Max Categories 
-//         NULL,                               //Priors  
-//         false,                              //Calculate Variables variance 
-//         0,                                  //Nactive Vars 
-//         500,                                //Max Tree Count 
-//         0.1,                            //Accuracy to archive 
-//         CV_TERMCRIT_EPS|CV_TERMCRIT_ITER    //Criteria to stop algorithm 
-//     );
-//     
-//     // //printf("%d %d\n", NUM_CLUSTERS, desc->cols);
-//     // assert(NUM_CLUSTERS == desc->cols);
-//     // CvScalar avg, std;
-//     // cvAvgSdv(desc, &avg, &std);
-//     
-//     // printf("variance %f mean %f\n", std.val[0], avg.val[0]);
-//     
-//     CvMat *var_type = cvCreateMat(desc->cols + 1, 1, CV_8U);
-//     cvSet(var_type, cvScalarAll(CV_VAR_NUMERICAL));
-//     cvSet2D(var_type, desc->cols, 0, cvScalar(CV_VAR_CATEGORICAL));
-//     
-//     if (RTREE_ON) rtree.train(
-//         desc, 
-//         CV_ROW_SAMPLE,
-//         responses,
-//         0,
-//         0,
-//         var_type,
-//         0,
-//         params
-//     );
-//     else cout << "RTREE is turned off" << endl;
-//     
-//     // const CvMat *imp = rtree.get_var_importance();
-//     // if (!imp) cout << "can't get var importance" << endl;
-//     // else {
-//     
-//     // cout << "Var importance: " << endl;
-//     // for (int i = 0; i < imp->cols; i++)
-//         // printf("%f ", cvGetReal2D(imp, 0, i));
-//     // }
-//     // cout << endl;
-//     
-//     cout << "Step Done:  rtree" << endl;
-//     return true;
+
 // }
 // 
 // bool Classifier::train_alltrees(CvMat *desc, CvMat *responses) 
@@ -448,11 +408,11 @@ bool Classifier::kmeans(DataSet *data)
 //     return true;
 // }
 
-int best_cluster(CvMat *centers, float *vars)
+int Classifier::best_cluster(CvMat *centers, float *vars)
 {
     float min_distance = INT_MAX;
     int min_index = -1;
-    for (int c = 0; c < NUM_CLUSTERS; ++c) {
+    for (int c = 0; c < num_clusters; ++c) {
         float dist = 0;
         for (int j = 0; j < SURF_SIZE; ++j) {
             dist += pow(vars[j] - cvGetReal2D(centers, c, j), 2);
@@ -472,6 +432,7 @@ bool Classifier::test(DataSet *data)
     cout << "\t\tTesting" << endl;
     
     svm.scores.reset();
+    rtrees.scores.reset();
 
     for (int img = 0; img < data->num_images; ++img) 
     {
@@ -482,7 +443,7 @@ bool Classifier::test(DataSet *data)
             cluster[i] = best_cluster(centers, data->get(img, i) );
         
         
-        CvMat *query = cvCreateMat(1, NUM_CLUSTERS, CV_32FC1);
+        CvMat *query = cvCreateMat(1, num_clusters, CV_32FC1);
         cvSet(query, cvScalar(0));
         for (int row = 0; row < data->count(img); ++row) {
             int cluster_idx = cluster[row];
@@ -493,6 +454,7 @@ bool Classifier::test(DataSet *data)
         int trueClass = data->get_class(img);
         
         svm.test(query, trueClass);
+        rtrees.test(query, trueClass);
         
         
         // if (ALL_TREES_ON) {
@@ -517,15 +479,16 @@ bool Classifier::test(DataSet *data)
         //         }
         //     }
         // }
-        
+
     }
     
-    svm.score.out();
+    svm.scores.out("SVM: ");
+    rtrees.scores.out("RTrees: ");
     
     return true;
 }
 
-bool Classifier::extract(TTrainingFileList& fileList, const char *featuresFile)
+bool Classifier::extract(TTrainingFileList& fileList)
 {
     cout << "Classes:" << endl;
     for (int i = 0; i < (int)fileList.classes.size(); i++) {
@@ -551,7 +514,7 @@ bool Classifier::extract(TTrainingFileList& fileList, const char *featuresFile)
     for (int i = 0; i < minfiles; i++) 
     {
         // skip too many others...
-        if (fileList.files[i].label == "other" && --max_other < 0) continue;
+        if (fileList.files[i].label == "other" && --max_others < 0) continue;
 
         // show progress
         if (i % 10 == 0) showProgress(i, minfiles);
@@ -595,9 +558,11 @@ bool Classifier::extract(TTrainingFileList& fileList, const char *featuresFile)
     cout << endl << "Extracted surf features. " << endl;
 
     cout << "Train Set" << endl;
+    set_train.recount();
     set_train.stats();
     
     cout << "Test Set" << endl;
+    set_train.recount();
     set_test.stats();
     
     return true;
