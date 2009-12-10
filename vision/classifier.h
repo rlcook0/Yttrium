@@ -35,8 +35,9 @@
 /* Classifier class ---------------------------------------------------------
  */
 
-#define NUM_CLUSTERS    500
-#define MIN_IPOINTS     10
+#define NUM_CLUSTERS    30
+#define MIN_IPOINTS     15
+#define SURF_SIZE       128
  
 enum ObjectTypes {
     kClock = 0,
@@ -50,16 +51,21 @@ enum ObjectTypes {
 
 using namespace std;
 
+typedef float* feat;
+typedef vector<pair<string, vector<feat> > > class_feat_vec;
+typedef pair<string, vector<feat> > class_feat;
+
 class Ipoint;
 struct CvFeatureTree;
 
 class Classifier {
 protected:
     CvRNG rng;
-
+    CvMemStorage* storage;
+    
     // CS221 TO DO: ADD YOUR MEMBER VARIABLES HERE
     map< string, vector<Ipoint> > surfFeatures;
-    vector<pair<string, vector<Ipoint> > > allImages, *trainSet, *testSet;
+    class_feat_vec allImages, *trainSet, *testSet;
     
     CvFeatureTree *surfFT, *centersFT;
     
@@ -101,7 +107,7 @@ public:
     
     // run the classifier over a single frame
     virtual bool run(const IplImage *, CObjectList *, bool);
-    virtual bool run_boxscan(IplImage *, vector<int> &, vector<Ipoint> &);
+    virtual bool run_boxscan(IplImage *, vector<int> &, vector<CvSURFPoint> &, vector<feat> &);
     
     // extract the classifier features
     virtual bool extract(TTrainingFileList&, const char *);
@@ -113,7 +119,7 @@ public:
     virtual bool train_bayes(CvMat *, CvMat *);
     virtual bool train_svm(CvMat *, CvMat *);
     virtual bool train_knn(CvMat *, CvMat *);
-    virtual bool train_test(vector<pair<string, vector<Ipoint> > > *data, bool);
+    virtual bool train_test(class_feat_vec *data, bool);
     virtual bool train_rtree(CvMat *, CvMat *);
     virtual bool train_mugtree(CvMat *, CvMat *);
 
