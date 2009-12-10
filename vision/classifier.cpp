@@ -28,6 +28,8 @@
 #include "classifier.h"
 #include "logreg.h"
 
+#include "homography.h"
+
 #define BAYES_ON false
 #define SVM_ON false
 #define KNN_ON false
@@ -1027,7 +1029,7 @@ bool Classifier::extract(TTrainingFileList& fileList, const char *featuresFile)
 
     IplImage *image;
     
-    int maxOther = INT_MAX;
+    int maxOther = 1000;
     int maxImages = INT_MAX;
 
     cout << "Processing images..." << endl;
@@ -1048,6 +1050,55 @@ bool Classifier::extract(TTrainingFileList& fileList, const char *featuresFile)
             cerr << "ERROR: could not load image " << fileList.files[i].filename.c_str() << endl;
             continue;
         }
+        
+        // const int MAX_CORNERS = 500;
+        
+          // /* IVAN'S CODE - extract corners! */
+        // CvSize img_sz = cvGetSize(image);
+        // //IplImage *image = cvCreateImage(img_sz, IPL_DEPTH_8U, 1);
+        // //cvCvtColor(frame, image, CV_BGR2GRAY);
+        // IplImage* eig_image = cvCreateImage( img_sz, IPL_DEPTH_32F, 1 );
+        // IplImage* tmp_image = cvCreateImage( img_sz, IPL_DEPTH_32F, 1 );
+        // int corner_count = MAX_CORNERS;
+        // CvPoint2D32f* cornersA = new CvPoint2D32f[ MAX_CORNERS ];
+        // cvGoodFeaturesToTrack(
+            // image,
+            // eig_image,
+            // tmp_image,
+            // cornersA,
+            // &corner_count,
+            // 0.01,
+            // 5.0,
+            // 0,
+            // 3,
+            // 0,
+            // 0.04
+        // );
+        // cvFindCornerSubPix(
+            // image,
+            // cornersA,
+            // corner_count,
+            // cvSize(10, 10),
+            // cvSize(-1, -1),
+            // cvTermCriteria(CV_TERMCRIT_ITER|CV_TERMCRIT_EPS,20,0.03)
+        // );
+    
+        // CvMat *pts = cvCreateMat(corner_count, 2, CV_32F);
+        // for (int row = 0; row < corner_count; ++row) {
+            // CV_MAT_ELEM(*pts, float, row, 0) = cornersA[row].x;
+            // CV_MAT_ELEM(*pts, float, row, 1) = cornersA[row].y;
+        // }
+        
+        // Homography h;
+        // CvMat *homog = h.compute(pts, pts);
+        // cvReleaseMat(&pts);
+        
+        // cout << cvAvg(homog).val[0] << endl;
+        
+        // CvMat *cvhomog = cvCreateMat(3, 3, CV_32F);
+        
+        // cvFindHomography(pts, pts, cvhomog, CV_RANSAC, 2);
+        // cout << cvAvg(cvhomog).val[0] << endl;
         
         string label = fileList.files[i].label;
 

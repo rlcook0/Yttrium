@@ -35,7 +35,7 @@
 /* Classifier class ---------------------------------------------------------
  */
 
-#define NUM_CLUSTERS    1000
+#define NUM_CLUSTERS    5000
 #define MIN_IPOINTS     15
 #define SURF_SIZE       128
  

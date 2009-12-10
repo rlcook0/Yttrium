@@ -5,7 +5,7 @@
 #include "utils.h"
 #include "objects.h"
 
-#define NUM_TRIALS 10
+#define NUM_TRIALS 1000
 #define NUM_PAIRS  4
 
 class Homography {
@@ -17,7 +17,7 @@ public:
     int num_inliers();
     const CvMat *best_h();
     
-    threshold = 5.0;
+    double threshold;
 private:
     CvMat *points1, *points2;
     int largestInlierSet;
