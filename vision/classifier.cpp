@@ -377,14 +377,14 @@ bool Classifier::run(const IplImage *frame, CObjectList *objects, bool scored)
     
     // move old objects
     for (int i = 0; i < (int)objects->size(); ++i) {
-        (*objects)[i].rect.x -= totalXDiff * 5000;
-        (*objects)[i].rect.y -= totalYDiff * 5000;
+        (*objects)[i].rect.x -= totalXDiff * 10;
+        (*objects)[i].rect.y -= totalYDiff * 10;
     }
+    
+    cout << "Flow: " totalXDiff << " " << totalYDiff << endl;
     totalYDiff = 0;
     totalXDiff = 0;
     
-    cout << totalXDiff << endl;
-    cout << totalYDiff << endl;
     
     // Convert to grayscale.
     IplImage *gray  = cvCreateImage(cvGetSize(frame), IPL_DEPTH_8U, 1);
