@@ -39,7 +39,7 @@
 #define MIN_IPOINTS     15
 #define SURF_SIZE       128
 #define MAX_CORNERS     500
-#define DIST_THRESH     10
+#define DIST_THRESH     2
  
 enum ObjectTypes {
     kClock = 0,

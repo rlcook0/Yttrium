@@ -1109,6 +1109,7 @@ bool Classifier::extract(TTrainingFileList& fileList, const char *featuresFile)
             }
             
             if (!CORNERS_ON) {
+                kept++;
                 features.push_back(f);
                 continue;
             }
