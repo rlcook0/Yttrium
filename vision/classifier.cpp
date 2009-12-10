@@ -525,7 +525,7 @@ bool Classifier::run_boxscan(IplImage *dst, vector<int> &cluster, vector<CvSURFP
         
                 float scores[kNumObjectTypes];
                 int klass = btrees.predict(query, scores);
-                int min_score = 0;
+                int min_score = -3;
                                 
 //                cout << "I think it's a ";
                 for (int klass = 0; klass < kNumObjectTypes - 1; ++klass) {
