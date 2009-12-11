@@ -32,12 +32,12 @@ DEFS = -g -O0
 CC = g++
 #OPENCV_LIB_DIR = /afs/ir.stanford.edu/class/cs221/lib64/
 
-OPENSURF = ./OpenSURF
-OPENSURF_LD = $(OPENSURF)/surf.o $(OPENSURF)/fasthessian.o $(OPENSURF)/integral.o $(OPENSURF)/ipoint.o $(OPENSURF)/utils.o
+#OPENSURF = ./OpenSURF
+#OPENSURF_LD = $(OPENSURF)/surf.o $(OPENSURF)/fasthessian.o $(OPENSURF)/integral.o $(OPENSURF)/ipoint.o $(OPENSURF)/utils.o
 
 CKMEANS = ckmeans.so
 
-CCFLAGS = -Wall $(DEFS) -I$(OPENCV_INC_DIR) -I$(XML_INC_DIR) -I$(OPENSURF)
+CCFLAGS = -Wall $(DEFS) -I$(OPENCV_INC_DIR) -I$(XML_INC_DIR)
 LDFLAGS = -L$(OPENCV_LIB_DIR) $(XML_LIB)
 
 SUFFIX = $(firstword $(suffix $(SRC)))

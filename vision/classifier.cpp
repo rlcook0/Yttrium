@@ -18,10 +18,6 @@
 #include <sys/stat.h>
  
 #include "highgui.h"
-
-#include "surf.h"
-#include "surflib.h"
-
 #include "cv.h"
 #include "cxcore.h"
  
@@ -42,9 +38,11 @@ Classifier::Classifier()
     storage = cvCreateMemStorage(0);
  
     max_others = 2000;
-    num_clusters = 100;
+    num_clusters = 4000;
     kmeans_load = false;
     kmeans_save = false;
+    
+    btrees.on = true;
     
     test_on = true;
     test_to_train = 4;
@@ -65,7 +63,7 @@ Classifier::~Classifier()
  
  
 
-bool Classifier::loadState()
+bool Classifier::loadState(const char *filename)
 {
     centers = (CvMat *)cvLoad("centers.dat");
 

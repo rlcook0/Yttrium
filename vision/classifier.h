@@ -70,7 +70,7 @@ public:
     // destructor
     virtual ~Classifier();
     
-    bool loadState();
+    bool loadState(const char *);
 
     // run the classifier over a single frame
     void optical_flow(const IplImage *frame, double *xD, double *yD);
