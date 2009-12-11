@@ -582,48 +582,6 @@ bool Classifier::run_boxscan(IplImage *dst, vector<int> &cluster, vector<CvSURFP
                 foundbigger = true;
                 minScoreObject = newObjects[i];
             }
-<<<<<<< HEAD:vision/classifier.cpp
-            ++where;
-        }
-    }
-    
-    printf("We used %d of them\n", where);
-    
-    cout << "kmeans starting..." << endl;
-    
-    CvMat *clusters = cvCreateMat(trainIpoints, 1, CV_32SC1);
-    centers = cvCreateMat(NUM_CLUSTERS, SURF_SIZE, CV_32FC1);
-    cvKMeans2(
-        all_desc,       // samples
-        NUM_CLUSTERS,   // clusters
-        clusters,       // labels
-        cvTermCriteria(
-            CV_TERMCRIT_EPS|CV_TERMCRIT_ITER, // End criteria
-            10,                               // Max iter
-            0.1),                             //accuracy
-        1,              // attempts
-        &rng,           //rng
-        0,              // flags
-        centers,        // centers
-        NULL            // compactness
-    };
-    
-    cvReleaseMat(&all_desc);
-    
-    cout << "creating new descriptors..." << endl;
-    
-    cvSet(desc, cvRealScalar(0));
-    where = 0;
-    for(int i = 0; i < (int)(*trainSet).size(); ++i) {
-        for (int iptNo = 0; iptNo < (int)(*trainSet)[i]->second.size(); ++iptNo) {
-            int cluster = cvGetReal1D(clusters, where);
-            
-            //printf("(%d %d)\n", i, cluster);
-            int oldVal = cvGetReal2D(desc, i, cluster);
-            cvSetReal2D(desc, i, cluster, oldVal+1);
-            ++where;
-=======
->>>>>>> neo:vision/classifier.cpp
         }
     }
 
