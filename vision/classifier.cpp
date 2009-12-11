@@ -367,8 +367,10 @@ bool Classifier::run(const IplImage *frame, CObjectList *objects, bool scored)
     
     for (int i = 0; i < (int)prevObjects.size(); ++i) {
         if (prevObjects[i].rect.x > -20 && prevObjects[i].rect.x < frame->width 
-         && prevObjects[i].rect.y > -20 && prevObjects[i].rect.y < frame->height)
+         && prevObjects[i].rect.y > -20 && prevObjects[i].rect.y < frame->height) {
             objects->push_back(prevObjects[i]);
+            cout << prevObjects[i].label << " is now at (" << prevObjects[i].rect.x << ", " << prevObjects[i].rect.y << ")" << endl;
+        }
     }
     
     //printf("HEY OPTICAL FLOW!!!! %f %f\n", totalXDiff, totalYDiff);
@@ -432,8 +434,11 @@ bool Classifier::run(const IplImage *frame, CObjectList *objects, bool scored)
     run_boxscan(dst, cluster, keypts, features, newObjects, objects);
     for (int i = 0; i < (int)newObjects.size(); ++i) {
         if (newObjects[i].object.rect.x > -20 && newObjects[i].object.rect.x < frame->width 
-         && newObjects[i].object.rect.y > -20 && newObjects[i].object.rect.y < frame->height)
+         && newObjects[i].object.rect.y > -20 && newObjects[i].object.rect.y < frame->height) {
             objects->push_back(newObjects[i].object);
+            cout << "Found object: " << newObjects[i].object.label << " at (" ;
+            cout << newObjects[i].object.rect.x << ", " << newObjects[i].object.rect.y << ")" << endl;
+        }
     }
     
     prevObjects = *objects;

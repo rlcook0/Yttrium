@@ -12,15 +12,12 @@ TO TRAIN:
 
 ./train -t -o 4000 -k 4000 /afs/ir/class/cs221/vision/data/vision_all
 
-
 TO RUN:
 
 cp /afs/ir/users/c/a/cadander/public/needed_dats/* .
-./run -o performance.xml -x -g /afs/ir/class/cs221/vision/data/easy.xml /afs/ir/class/cs221/vision/data/easy/
+./test -c config.dat -o performance.xml -x -g /afs/ir/class/cs221/vision/data/easy.xml /afs/ir/class/cs221/vision/data/easy/
 ./evaluate -m performance.xml -g /afs/ir/class/cs221/vision/data/easy.xml
 
 TO UNDERSTAND:
 
 We will explain in the coming write-up.
-
-(but -t means train and use boosted decision trees)
