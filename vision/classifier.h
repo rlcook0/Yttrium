@@ -27,34 +27,23 @@
 
 #include "utils.h"
 #include "objects.h"
-#include "featureDictionary.h"
 
 #include "logreg.h"
 #include "template.h"
+#include "statmodel.h"
 
 /* Classifier class ---------------------------------------------------------
  */
 
-#define NUM_CLUSTERS    1000
-#define MIN_IPOINTS     15
-#define SURF_SIZE       128
- 
-enum ObjectTypes {
-    kClock = 0,
-    kMug,
-    kKeyboard,
-    kStapler,
-    kScissors,
-    kOther,
-    kNumObjectTypes
-};
 
 using namespace std;
 
-typedef float* feat;
-typedef vector<pair<string, vector<feat> > > class_feat_vec;
-typedef vector<pair<string, vector<feat> >* > class_feat_vec_star;
-typedef pair<string, vector<feat> > class_feat;
+
+typedef struct FoundObject {
+    CObject object; 
+    double score;
+} FoundObject;
+
 
 class Ipoint;
 struct CvFeatureTree;
@@ -65,68 +54,65 @@ protected:
     CvMemStorage* storage;
     
     // CS221 TO DO: ADD YOUR MEMBER VARIABLES HERE
-    map< string, vector<Ipoint> > surfFeatures;
-    class_feat_vec allImages; 
-    class_feat_vec_star *trainSet, *testSet;
-    
-    CvFeatureTree *surfFT, *centersFT;
-    
-    vector< pair<string, int> > surfThresh;
-    map<string, int> surfTotal;
-    
-    
-    int surfTotalIpoints;
-    
-    string indexToClass(int index);
-    int indexToClassInt(int index);
-    string classIntToString(int type);
-    int stringToClassInt(string type);
-    
-    CvNormalBayesClassifier bayes;
-    CvKNearest knn;
-    CvSVM svm;
-    CvRTrees rtree;
-    
-    CvBoost trees[kNumObjectTypes];
-
+    DataSet set_all;
+    DataSet set_test;
+    DataSet set_train;
+        
     CvMat* centers;
+    
+    double totalXDiff, totalYDiff;
+    vector<CObject> prevObjects;
+    
 public:
     // constructors
     Classifier();
     
     // destructor
     virtual ~Classifier();
-
-    // load and save classifier configuration
-    virtual bool loadState(const char *);
-    virtual bool saveState(const char *);
-
-    // load and save classifier configuration    
-    virtual bool loadSURFFile(const char *);
-    virtual bool saveSURFFile(const char *);
     
-    virtual bool setupKDTree();
-    
+    bool loadState(const char *);
+
     // run the classifier over a single frame
-    virtual bool run(const IplImage *, CObjectList *, bool);
-    virtual bool run_boxscan(IplImage *, vector<int> &, vector<CvSURFPoint> &, vector<feat> &);
+    void optical_flow(const IplImage *frame, double *xD, double *yD);
+    bool run_boxscan(IplImage *dst, vector<int> &cluster, vector<CvSURFPoint> &keypts, vector<float *> &pts, vector<FoundObject> &newObjects, const CObjectList *oldObjects);
+    bool run(const IplImage *frame, CObjectList *objects, bool scored);
+    bool showRect(IplImage *image, CObject *rect, const vector<CvSURFPoint> *pts = NULL);
     
     // extract the classifier features
-    virtual bool extract(TTrainingFileList&, const char *);
+    virtual bool extract(TTrainingFileList&);
         
     // train the classifier using given set of files
-    virtual bool train(TTrainingFileList&, const char *);
-        
-    virtual bool train_kmeans(CvMat *);
-    virtual bool train_bayes(CvMat *, CvMat *);
-    virtual bool train_svm(CvMat *, CvMat *);
-    virtual bool train_knn(CvMat *, CvMat *);
-    virtual bool train_test(class_feat_vec_star *data, bool);
-    virtual bool train_rtree(CvMat *, CvMat *);
-    virtual bool train_alltrees(CvMat *, CvMat *);
+    virtual bool train(); 
+    
+    bool test(DataSet *data);
+    
+    virtual bool kmeans(DataSet *data);   
+    
+    int best_cluster(CvMat *centers, float *vars);
+    
+    // Settings
+    bool kmeans_load;
+    bool kmeans_save;
+    
+    bool load_all;
+    bool save_all;
+    
+    bool test_on;
+    
+    int num_clusters;
+    int max_others;
+    int test_to_train;
+    
+    SM_Bayes bayes;
+    SM_SVM svm;
+    SM_RTrees rtrees;
+    SM_BTrees btrees;
+    //StatModel rtree;
+    ///StatModel trees;
+
+    IplImage *prevFrame;
 
 private:
     
-    bool showRect(IplImage *, CObject *, const vector<CvSURFPoint> *);
 };
 

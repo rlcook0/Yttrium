@@ -6,11 +6,14 @@
 ## ---------------------------------------------------------------------------
 
 # OpenCV library location
-#OPENCV_INC_DIR=/afs/ir/users/c/a/cadander/public/opencv/include
-#OPENCV_LIB_DIR=/afs/ir/users/c/a/cadander/public/opencv/lib
+OPENCV_INC_DIR=/afs/ir/users/c/a/cadander/public/opencv/include
+OPENCV_LIB_DIR=/afs/ir/users/c/a/cadander/public/opencv/lib
 
-OPENCV_INC_DIR=/usr/local/include/opencv
-OPENCV_LIB_DIR=/usr/local/lib
+#OPENCV_INC_DIR=/usr/local/include/opencv
+#OPENCV_LIB_DIR=/usr/local/lib
 
-XML_INC_DIR=/opt/stairvision/external
-XML_LIB=/opt/stairvision/external/xmlParser/xmlParser.a
+XML_INC_DIR=/afs/ir/class/cs221/stairvision/external
+XML_LIB=/afs/ir/class/cs221/stairvision/external/xmlParser/xmlParser.a
+
+#XML_INC_DIR=/opt/stairvision/external
+#XML_LIB=/opt/stairvision/external/xmlParser/xmlParser.a

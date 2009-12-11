@@ -17,8 +17,8 @@
 include Make.defaults
 
 PROGS = test train evaluate
-HDR = objects.h classifier.h replay.h utils.h CXMLParser.h featureDictionary.h featureDefinition.h template.h logreg.h
-SRC = objects.cpp classifier.cpp replay.cpp utils.cpp CXMLParser.cpp featureDictionary.cpp featureDefinition.cpp template.cpp logreg.cpp
+HDR = objects.h classifier.h replay.h utils.h CXMLParser.h logreg.h statmodel.h
+SRC = objects.cpp classifier.cpp replay.cpp utils.cpp CXMLParser.cpp logreg.cpp statmodel.cpp
 
 #MORE_LIBS=-ltiff -lpthread -lpng -lm
 #GTK_LIBS=$(shell pkg-config gtk+ --libs)
@@ -32,13 +32,13 @@ DEFS = -g -O0
 CC = g++
 #OPENCV_LIB_DIR = /afs/ir.stanford.edu/class/cs221/lib64/
 
-OPENSURF = ./OpenSURF
-OPENSURF_LD = $(OPENSURF)/surf.o $(OPENSURF)/fasthessian.o $(OPENSURF)/integral.o $(OPENSURF)/ipoint.o $(OPENSURF)/utils.o
+#OPENSURF = ./OpenSURF
+#OPENSURF_LD = $(OPENSURF)/surf.o $(OPENSURF)/fasthessian.o $(OPENSURF)/integral.o $(OPENSURF)/ipoint.o $(OPENSURF)/utils.o
 
 CKMEANS = ckmeans.so
 
-CCFLAGS = -Wall $(DEFS) -I$(OPENCV_INC_DIR) -I$(XML_INC_DIR) -I$(OPENSURF)
-LDFLAGS = -L$(OPENCV_LIB_DIR) $(XML_LIB) $(OPENSURF_LD)
+CCFLAGS = -Wall $(DEFS) -I$(OPENCV_INC_DIR) -I$(XML_INC_DIR)
+LDFLAGS = -L$(OPENCV_LIB_DIR) $(XML_LIB)
 
 SUFFIX = $(firstword $(suffix $(SRC)))
 OBJ = $(SRC:$(SUFFIX)=.o)

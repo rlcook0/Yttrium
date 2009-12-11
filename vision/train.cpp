@@ -47,11 +47,21 @@ using namespace std;
 
 void usage() {
     cerr << "./train [<options>] <directory>" << endl << endl;
-    cerr << "OPTIONS:" << endl;
-    cerr << "    -c <filename>  :: configuration file for saving state" << endl;
-    cerr << "    -t <filename>  :: training file for saving feature values" << endl;
-    cerr << "    -h             :: show this message" << endl;
-    cerr << "    -v             :: verbose" << endl;
+    cerr << "Options:" << endl;
+    cerr << "    -lk :: load kmeans" << endl;
+    cerr << "    -sk :: save kmeans" << endl;
+    cerr << "    -k <num> :: num clusters " << endl;
+    cerr << "    -o <num> :: max others " << endl;
+    
+    cerr << endl << "Classifiers:" << endl;
+    cerr << "    -b :: use Naive Bayes" << endl;
+    cerr << "    -s :: use SVM" << endl;
+    cerr << "    -r :: use Random Forest" << endl;
+    cerr << "    -t :: use Boosted Decision Trees" << endl;
+    
+    cerr << endl << "Other:" << endl;
+    cerr << "    -h :: show this message" << endl;
+    cerr << "    -v :: verbose" << endl;
     cerr << endl;
 }
 
@@ -69,6 +79,7 @@ int main(int argc, char *argv[])
     trainingFile = NULL;
     featuresFile = NULL;
 
+
     // check arguments
     args = argv + 1;
     while (argc-- > 2) {
@@ -82,9 +93,33 @@ int main(int argc, char *argv[])
         } else if (!strcmp(*args, "-f")) {
             argc--; args++;
             featuresFile = *args;
-        } else if (!strcmp(*args, "-t")) {
+            
+            
+            
+        } else if (!strcmp(*args, "-k")) { 
             argc--; args++;
-            trainingFile = *args;
+            sscanf(*args, "%i", &(classifier.num_clusters));
+            printf("Set num_clusters to %d \n", classifier.num_clusters);
+            
+        } else if (!strcmp(*args, "-o")) { 
+            argc--; args++;
+            int d;
+            sscanf(*args, "%i", &d);
+            classifier.max_others = d;
+            printf("Set max_others to %d \n", d);
+            
+        } else if (!strcmp(*args, "-lk")) { classifier.kmeans_load = true;
+        } else if (!strcmp(*args, "-sk")) { classifier.kmeans_save = true;
+
+        } else if (!strcmp(*args, "-b")) { classifier.bayes.on = true;   
+        } else if (!strcmp(*args, "-s")) { classifier.svm.on = true;
+        } else if (!strcmp(*args, "-r")) { classifier.rtrees.on = true;
+        } else if (!strcmp(*args, "-t")) { classifier.btrees.on = true;
+            
+            
+        } else if (!strcmp(*args, "--save")) { classifier.save_all = true;    
+        } else if (!strcmp(*args, "--load")) { classifier.load_all = true;
+            
         } else if (!strcmp(*args, "-h")) {
             usage();
             return 0;
@@ -97,28 +132,31 @@ int main(int argc, char *argv[])
         args++;
     }
 
-    if (argc != 1) {
-	usage();
-	exit(-1);
-    }
-
+    if (argc != 1) { usage(); exit(-1); }
+    cout << endl; 
+    
     // load the training file list
     TTrainingFileList fileList;
     fileList = getTrainingFiles(*args, ".jpg");
     
+    if (!classifier.extract(fileList)) {
+        cerr << "ERROR: coult not extract features" << endl;
+        exit(-1);
+    }
+    
     // now train the classifier
-    if (!classifier.train(fileList, trainingFile)) {
+    if (!classifier.train()) {
         cerr << "ERROR: could not train classifier" << endl;
         exit(-1);
     }
-
-    // save classifier configuration
-    if (configurationFile != NULL) {
-        if (!classifier.saveState(configurationFile)) {
-            cerr << "ERROR: could not save classifier configuration" << endl;
-            exit(-1);
-        }
-    }
+    // 
+    // // save classifier configuration
+    // if (configurationFile != NULL) {
+    //     if (!classifier.saveState(configurationFile)) {
+    //         cerr << "ERROR: could not save classifier configuration" << endl;
+    //         exit(-1);
+    //     }
+    // }
 
     return 0;
 }
